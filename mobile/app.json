@@ -1,0 +1,16 @@
+{
+  "expo": {
+    "name": "CricVision AI Mobile",
+    "slug": "moment-intelligence-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.anonymous.momentintelligencemobile"
+    }
+  }
+}
