@@ -1,0 +1,71 @@
+====================================================================
+               CRICVISION AI MOBILE APP - INSTALLATION GUIDE
+====================================================================
+
+PROJECT OVERVIEW:
+CricVision AI is a React Native (Expo SDK 52) mobile application for
+cricket batting analysis, pose estimation, and biomechanical coaching.
+
+--------------------------------------------------------------------
+1. PREREQUISITES
+--------------------------------------------------------------------
+- Node.js (v18.x or v20.x installed on your PC)
+- npm (installed with Node.js)
+- Expo Go App (Installed on Android / iOS phone from Play Store or App Store)
+- Python 3.10+ (if running backend locally)
+
+--------------------------------------------------------------------
+2. HOW TO INSTALL & SETUP
+--------------------------------------------------------------------
+Step 1: Open Terminal / Command Prompt and navigate to the mobile folder:
+        cd d:\momentintellience-mobile\mobile
+
+Step 2: Install project dependencies:
+        npm install
+
+--------------------------------------------------------------------
+3. BACKEND API CONFIGURATION
+--------------------------------------------------------------------
+Open file: mobile/src/services/api.ts
+
+Option A (Remote AWS Cloud Backend):
+    export const CUSTOM_API_URL: string | null = 'http://54.183.208.156:8000/api/v1';
+
+Option B (Local PC Backend):
+    export const CUSTOM_API_URL: string | null = null;
+    (This automatically detects your PC's IP address on Wi-Fi).
+
+--------------------------------------------------------------------
+4. RUNNING THE MOBILE APP
+--------------------------------------------------------------------
+Step 1: Start the Expo Metro Server:
+        npx expo start
+
+Step 2: Connect your Mobile Phone:
+        - Make sure your Phone and PC are connected to the SAME Wi-Fi network.
+        - Open Expo Go on your phone and scan the QR code displayed in the terminal.
+
+Step 3: (Optional) Run on Emulator:
+        - Press 'a' in terminal for Android Emulator
+        - Press 'w' in terminal for Web Preview
+
+--------------------------------------------------------------------
+5. LOCAL BACKEND SETUP (IF RUNNING BACKEND ON YOUR PC)
+--------------------------------------------------------------------
+If you run the FastAPI backend on your computer (momentintellience-api):
+
+Step 1: Start uvicorn with --host 0.0.0.0 (Crucial for mobile phone access):
+        python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+Step 2: Allow Port 8000 in Windows Firewall (Run in Admin PowerShell):
+        New-NetFirewallRule -DisplayName "FastAPI Port 8000" -Direction Inbound -LocalPort 8000 -Protocol TCP -Action Allow
+
+--------------------------------------------------------------------
+6. TROUBLESHOOTING
+--------------------------------------------------------------------
+- AxiosError Network Error:
+  Ensure backend is started with --host 0.0.0.0 and your phone is on the same Wi-Fi.
+
+- Metro Cache Reset:
+  Run: npx expo start -c
+====================================================================
