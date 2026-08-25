@@ -3,8 +3,8 @@ import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { AnalysisReport } from '../types';
 
-// Set custom URL here if using Ngrok / LocalTunnel / Cloud server (e.g. 'https://your-ngrok-url.ngrok-free.app/api/v1')
-export const CUSTOM_API_URL: string | null = 'http://54.183.208.156:8000/api/v1';
+// Set custom URL here (e.g. local Wi-Fi IP 'http://192.168.31.60:8000/api/v1' or Cloud server)
+export const CUSTOM_API_URL: string | null = 'http://192.168.31.60:8000/api/v1';
 
 // Dynamic API Base URL resolution for Physical Mobile Devices vs Emulators vs Web
 const getDynamicApiUrl = (): string => {
@@ -145,7 +145,7 @@ export interface PollStatusUpdate {
  */
 export const pollForAnalysisResult = async (
   videoId: string,
-  maxAttempts: number = 90,
+  maxAttempts: number = 120,
   intervalMs: number = 2000,
   onStatusUpdate?: (update: PollStatusUpdate) => void
 ): Promise<AnalysisReport> => {
@@ -240,8 +240,8 @@ export const uploadAndGetOverlay = async (
   videoUri: string,
   movementProfile: string = 'CRICKET',
   onProgress?: (percentage: number) => void,
-  maxAttempts: number = 30,
-  intervalMs: number = 1500,
+  maxAttempts: number = 120,
+  intervalMs: number = 2000,
   battingStance: 'AUTO' | 'RIGHT' | 'LEFT' = 'AUTO'
 ): Promise<string> => {
   // Step 1: upload video

@@ -10,7 +10,8 @@
       "supportsTablet": true
     },
     "android": {
-      "package": "com.anonymous.momentintelligencemobile"
+      "package": "com.anonymous.momentintelligencemobile",
+      "usesCleartextTraffic": true
     }
   }
 }

@@ -1,10 +1,11 @@
 ====================================================================
-               CRICVISION AI MOBILE APP - INSTALLATION GUIDE
+               CRICVISION AI MOBILE APP & AWS DEPLOYMENT GUIDE
 ====================================================================
 
 PROJECT OVERVIEW:
 CricVision AI is a React Native (Expo SDK 52) mobile application for
-cricket batting analysis, pose estimation, and biomechanical coaching.
+cricket batting analysis, pose estimation, and biomechanical coaching,
+connected to a FastAPI Python backend.
 
 --------------------------------------------------------------------
 1. PREREQUISITES
@@ -12,10 +13,10 @@ cricket batting analysis, pose estimation, and biomechanical coaching.
 - Node.js (v18.x or v20.x installed on your PC)
 - npm (installed with Node.js)
 - Expo Go App (Installed on Android / iOS phone from Play Store or App Store)
-- Python 3.10+ (if running backend locally)
+- AWS EC2 Ubuntu Server (for Cloud Backend Deployment)
 
 --------------------------------------------------------------------
-2. HOW TO INSTALL & SETUP
+2. MOBILE APP SETUP & RUNNING
 --------------------------------------------------------------------
 Step 1: Open Terminal / Command Prompt and navigate to the mobile folder:
         cd d:\momentintellience-mobile\mobile
@@ -23,49 +24,84 @@ Step 1: Open Terminal / Command Prompt and navigate to the mobile folder:
 Step 2: Install project dependencies:
         npm install
 
---------------------------------------------------------------------
-3. BACKEND API CONFIGURATION
---------------------------------------------------------------------
-Open file: mobile/src/services/api.ts
+Step 3: Verify / Configure API URL:
+        File: mobile/src/services/api.ts
+        
+        Live AWS Cloud Backend (Current Config):
+        export const CUSTOM_API_URL: string | null = 'http://54.183.208.156:8000/api/v1';
 
-Option A (Remote AWS Cloud Backend):
-    export const CUSTOM_API_URL: string | null = 'http://54.183.208.156:8000/api/v1';
-
-Option B (Local PC Backend):
-    export const CUSTOM_API_URL: string | null = null;
-    (This automatically detects your PC's IP address on Wi-Fi).
-
---------------------------------------------------------------------
-4. RUNNING THE MOBILE APP
---------------------------------------------------------------------
-Step 1: Start the Expo Metro Server:
+Step 4: Start the Expo Metro Server:
         npx expo start
 
-Step 2: Connect your Mobile Phone:
-        - Make sure your Phone and PC are connected to the SAME Wi-Fi network.
-        - Open Expo Go on your phone and scan the QR code displayed in the terminal.
-
-Step 3: (Optional) Run on Emulator:
-        - Press 'a' in terminal for Android Emulator
-        - Press 'w' in terminal for Web Preview
+Step 5: Connect Mobile Phone:
+        - Open Expo Go app on your mobile phone.
+        - Scan the QR code displayed in your terminal.
 
 --------------------------------------------------------------------
-5. LOCAL BACKEND SETUP (IF RUNNING BACKEND ON YOUR PC)
+3. AWS EC2 UBUNTU BACKEND SERVER DEPLOYMENT (COMPLETE PROCESS)
 --------------------------------------------------------------------
-If you run the FastAPI backend on your computer (momentintellience-api):
+Step 1: SSH into your AWS EC2 Ubuntu Server from Windows CMD:
+        icacls momentintelligence.pem /reset
+        icacls momentintelligence.pem /inheritance:r
+        icacls momentintelligence.pem /grant:r "%USERNAME%:R"
+        ssh -i momentintelligence.pem ubuntu@54.183.208.156
 
-Step 1: Start uvicorn with --host 0.0.0.0 (Crucial for mobile phone access):
-        python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+Step 2: Install Docker & Git on Ubuntu Server:
+        sudo apt update && sudo apt upgrade -y
+        sudo apt install -y git curl nginx certbot python3-certbot-nginx
+        curl -fsSL https://get.docker.com -o get-docker.sh
+        sudo sh get-docker.sh
+        sudo usermod -aG docker $USER
+        newgrp docker
 
-Step 2: Allow Port 8000 in Windows Firewall (Run in Admin PowerShell):
-        New-NetFirewallRule -DisplayName "FastAPI Port 8000" -Direction Inbound -LocalPort 8000 -Protocol TCP -Action Allow
+Step 3: Clone Code & Navigate to Backend:
+        git clone -b vamshi_dev https://github.com/vamshijai64/momentintellience-api.git
+        cd momentintellience-api/backend
+
+Step 4: Configure .env File on Server:
+        nano .env
+        
+        Paste:
+        PROJECT_NAME="Moment Intelligence"
+        SECRET_KEY="moment-intelligence-secret-key-prod-2026"
+        DATABASE_URL="sqlite+aiosqlite:///./moment_intelligence.db"
+        STORAGE_TYPE="local"
+        CORS_ORIGINS=["*"]
+        
+        (Save: Ctrl+O -> Enter -> Ctrl+X)
+
+Step 5: Create Real Database File:
+        touch moment_intelligence.db
+
+Step 6: Build & Run Docker Container:
+        docker compose up -d --build
+
+Step 7: Check Container Logs & Status:
+        docker compose ps
+        docker compose logs -f
 
 --------------------------------------------------------------------
-6. TROUBLESHOOTING
+4. USEFUL MANAGEMENT COMMANDS ON UBUNTU SERVER
 --------------------------------------------------------------------
-- AxiosError Network Error:
-  Ensure backend is started with --host 0.0.0.0 and your phone is on the same Wi-Fi.
+- Pull latest changes & rebuild:
+  git pull origin vamshi_dev
+  docker compose up -d --build
 
-- Metro Cache Reset:
-  Run: npx expo start -c
+- View live application logs:
+  docker compose logs -f
+
+- Restart backend container:
+  docker compose restart
+
+--------------------------------------------------------------------
+5. LIVE API ENDPOINTS
+--------------------------------------------------------------------
+- Interactive API Docs (Swagger UI):
+  http://54.183.208.156:8000/docs
+
+- Health Check Endpoint:
+  http://54.183.208.156:8000/health
+
+- API Base URL:
+  http://54.183.208.156:8000/api/v1
 ====================================================================
