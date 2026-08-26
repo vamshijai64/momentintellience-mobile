@@ -5,13 +5,18 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "package": "com.anonymous.momentintelligencemobile",
       "usesCleartextTraffic": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "ec7a9349-3452-4d21-94d1-1125d9b91780"
+      }
     }
   }
 }

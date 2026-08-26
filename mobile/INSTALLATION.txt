@@ -28,7 +28,7 @@ Step 3: Verify / Configure API URL:
         File: mobile/src/services/api.ts
         
         Live AWS Cloud Backend (Current Config):
-        export const CUSTOM_API_URL: string | null = 'http://54.183.208.156:8000/api/v1';
+        export const CUSTOM_API_URL: string | null = 'http://18.144.67.31:8000/api/v1';
 
 Step 4: Start the Expo Metro Server:
         npx expo start
@@ -44,7 +44,7 @@ Step 1: SSH into your AWS EC2 Ubuntu Server from Windows CMD:
         icacls momentintelligence.pem /reset
         icacls momentintelligence.pem /inheritance:r
         icacls momentintelligence.pem /grant:r "%USERNAME%:R"
-        ssh -i momentintelligence.pem ubuntu@54.183.208.156
+        ssh -i momentintelligence.pem ubuntu@18.144.67.31
 
 Step 2: Install Docker & Git on Ubuntu Server:
         sudo apt update && sudo apt upgrade -y
@@ -97,11 +97,11 @@ Step 7: Check Container Logs & Status:
 5. LIVE API ENDPOINTS
 --------------------------------------------------------------------
 - Interactive API Docs (Swagger UI):
-  http://54.183.208.156:8000/docs
+  http://18.144.67.31:8000/docs
 
 - Health Check Endpoint:
-  http://54.183.208.156:8000/health
+  http://18.144.67.31:8000/health
 
 - API Base URL:
-  http://54.183.208.156:8000/api/v1
+  http://18.144.67.31:8000/api/v1
 ====================================================================

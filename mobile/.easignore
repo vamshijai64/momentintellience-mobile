@@ -1,0 +1,15 @@
+# Ignore dependencies and Expo caches
+node_modules/
+.expo/
+dist/
+web-build/
+
+# Ignore local Android build outputs, caches, and local SDK properties
+android/build/
+android/app/build/
+android/.gradle/
+android/local.properties
+.gradle/
+
+# Local env files
+.env*.local

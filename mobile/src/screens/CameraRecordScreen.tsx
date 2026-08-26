@@ -270,9 +270,15 @@ export const CameraRecordScreen: React.FC<CameraRecordScreenProps> = ({ onVideoP
 
   const handlePickGalleryVideo = async () => {
     try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Please allow photo/video gallery permissions in your device settings to upload videos.');
+        return;
+      }
+
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['videos'],
-        allowsEditing: true,
+        mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+        allowsEditing: false,
         quality: 1,
       });
 
@@ -280,8 +286,9 @@ export const CameraRecordScreen: React.FC<CameraRecordScreenProps> = ({ onVideoP
         const selectedVideoUri = result.assets[0].uri;
         await processRecordedVideo(selectedVideoUri);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to pick gallery video', err);
+      Alert.alert('Gallery Error', err?.message || 'Could not open video gallery.');
     }
   };
 

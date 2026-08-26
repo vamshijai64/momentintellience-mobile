@@ -3,8 +3,8 @@ import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { AnalysisReport } from '../types';
 
-// Set custom URL here (e.g. local Wi-Fi IP 'http://192.168.31.60:8000/api/v1' or Cloud server)
-export const CUSTOM_API_URL: string | null = 'http://192.168.31.60:8000/api/v1';
+// Set custom URL here if using Ngrok / LocalTunnel / Cloud server (e.g. 'https://your-ngrok-url.ngrok-free.app/api/v1')
+export const CUSTOM_API_URL: string | null = 'http://18.144.67.31:8000/api/v1';
 
 // Dynamic API Base URL resolution for Physical Mobile Devices vs Emulators vs Web
 const getDynamicApiUrl = (): string => {
@@ -12,7 +12,7 @@ const getDynamicApiUrl = (): string => {
   if (Platform.OS === 'web') {
     return 'http://localhost:8000/api/v1';
   }
-  
+
   // Try to automatically derive backend IP from Metro server address (works on physical phone & emulator)
   const hostUri = Constants.expoConfig?.hostUri || (Constants.manifest as any)?.debuggerHost;
   if (hostUri) {
@@ -83,14 +83,18 @@ export const uploadVideoForAnalysis = async (
   battingStance: 'AUTO' | 'RIGHT' | 'LEFT' = 'AUTO'
 ): Promise<{ id?: string; video_id?: string; report_id?: string; overlay_video_path?: string }> => {
   const formData = new FormData();
-  
-  const filename = videoUri.split('/').pop() || 'cricket_shot.mp4';
+
+  const cleanUri = Platform.OS === 'android' && !videoUri.startsWith('file://') && !videoUri.startsWith('content://') 
+    ? `file://${videoUri}` 
+    : videoUri;
+
+  const filename = cleanUri.split('/').pop() || 'cricket_shot.mp4';
   const match = /\.(\w+)$/.exec(filename);
   const type = match ? `video/${match[1]}` : 'video/mp4';
 
   // @ts-ignore: FormData in React Native accepts uri/name/type object
   formData.append('file', {
-    uri: videoUri,
+    uri: cleanUri,
     name: filename,
     type: type,
   });
@@ -99,21 +103,32 @@ export const uploadVideoForAnalysis = async (
   formData.append('batting_stance', battingStance);
 
   try {
-    const response = await apiClient.post('/videos/upload', formData, {
+    const uploadUrl = `${API_BASE_URL}/videos/upload`;
+    console.log('Uploading video to:', uploadUrl);
+
+    if (onProgress) onProgress(15);
+
+    const response = await fetch(uploadUrl, {
+      method: 'POST',
+      body: formData,
       headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-      onUploadProgress: (progressEvent: any) => {
-        if (progressEvent.total && onProgress) {
-          const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          onProgress(percent);
-        }
+        'Accept': 'application/json',
       },
     });
-    return response.data;
+
+    if (onProgress) onProgress(70);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Upload failed (${response.status}): ${errorText}`);
+    }
+
+    const data = await response.json();
+    return data;
   } catch (error: any) {
-    if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error')) {
-      throw new Error(`Cannot connect to backend server at ${API_BASE_URL}.\n\nPlease verify:\n1. Backend is running (uvicorn app.main:app --port 8000)\n2. Phone and PC are on the same Wi-Fi network (IP: 192.168.31.60)\n3. Port 8000 is allowed through Windows Firewall.`);
+    console.error('Upload network error:', error);
+    if (error.message?.includes('Network request failed') || error.code === 'ERR_NETWORK') {
+      throw new Error(`Cannot connect to backend server at ${API_BASE_URL}.\n\nPlease verify:\n1. Server is running at ${API_BASE_URL}\n2. Phone has active internet/cellular or Wi-Fi connection.`);
     }
     throw error;
   }
@@ -145,7 +160,7 @@ export interface PollStatusUpdate {
  */
 export const pollForAnalysisResult = async (
   videoId: string,
-  maxAttempts: number = 120,
+  maxAttempts: number = 90,
   intervalMs: number = 2000,
   onStatusUpdate?: (update: PollStatusUpdate) => void
 ): Promise<AnalysisReport> => {
@@ -240,8 +255,8 @@ export const uploadAndGetOverlay = async (
   videoUri: string,
   movementProfile: string = 'CRICKET',
   onProgress?: (percentage: number) => void,
-  maxAttempts: number = 120,
-  intervalMs: number = 2000,
+  maxAttempts: number = 30,
+  intervalMs: number = 1500,
   battingStance: 'AUTO' | 'RIGHT' | 'LEFT' = 'AUTO'
 ): Promise<string> => {
   // Step 1: upload video
