@@ -16,9 +16,16 @@ const CAMERA_MODE_SWITCH_TIMEOUT_MS = 700;
 interface CameraRecordScreenProps {
   onVideoProcessed?: (reportId: string, videoId: string, videoUri?: string) => void;
   onViewHistory?: () => void;
+  onViewProfile?: () => void;
+  onSignOut?: () => void;
 }
 
-export const CameraRecordScreen: React.FC<CameraRecordScreenProps> = ({ onVideoProcessed, onViewHistory }) => {
+export const CameraRecordScreen: React.FC<CameraRecordScreenProps> = ({
+  onVideoProcessed,
+  onViewHistory,
+  onViewProfile,
+  onSignOut,
+}) => {
   const [permission, requestPermission] = useCameraPermissions();
   const [micPermission, requestMicPermission] = useMicrophonePermissions();
   const [facing, setFacing] = useState<'back' | 'front'>('back');
@@ -209,7 +216,11 @@ export const CameraRecordScreen: React.FC<CameraRecordScreenProps> = ({ onVideoP
     RETRYING: 'Reconnecting to server...',
   };
 
-  const processRecordedVideo = async (videoUri: string) => {
+  const processRecordedVideo = async (
+    videoUri: string,
+    stanceOverride?: 'AUTO' | 'RIGHT' | 'LEFT'
+  ) => {
+    const stanceToSend = stanceOverride || battingStance;
     setLastVideoUri(videoUri);
     setUploadError(null);
     try {
@@ -220,7 +231,7 @@ export const CameraRecordScreen: React.FC<CameraRecordScreenProps> = ({ onVideoP
       // 1. Multipart Upload (0-70% of the visible bar)
       const result = await uploadVideoForAnalysis(videoUri, 'CRICKET', (progress) => {
         setUploadProgress(Math.max(2, Math.min(70, progress * 0.7)));
-      }, battingStance);
+      }, stanceToSend);
 
       const videoId = result.id || result.video_id;
       if (!videoId) {
@@ -284,7 +295,33 @@ export const CameraRecordScreen: React.FC<CameraRecordScreenProps> = ({ onVideoP
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const selectedVideoUri = result.assets[0].uri;
-        await processRecordedVideo(selectedVideoUri);
+        // Gallery clips (other apps / WhatsApp) need batting hand — AUTO
+        // often flips long off to third man. Ask before analyzing.
+        Alert.alert(
+          'Who is batting?',
+          'Uploaded videos need the batting hand so shot direction (long off vs third man) is correct.',
+          [
+            {
+              text: 'Right-hand',
+              onPress: () => {
+                setBattingStance('RIGHT');
+                processRecordedVideo(selectedVideoUri, 'RIGHT');
+              },
+            },
+            {
+              text: 'Left-hand',
+              onPress: () => {
+                setBattingStance('LEFT');
+                processRecordedVideo(selectedVideoUri, 'LEFT');
+              },
+            },
+            {
+              text: 'Auto detect',
+              style: 'cancel',
+              onPress: () => processRecordedVideo(selectedVideoUri, battingStance),
+            },
+          ]
+        );
       }
     } catch (err: any) {
       console.error('Failed to pick gallery video', err);
@@ -310,10 +347,10 @@ export const CameraRecordScreen: React.FC<CameraRecordScreenProps> = ({ onVideoP
       <View style={styles.centerContainer}>
         <Text style={styles.permissionTitle}>CAMERA PERMISSION REQUIRED</Text>
         <Text style={styles.permissionSub}>
-          CricVision requires camera access to capture your cricket technique and posture.
+          AI Cricket Coach requires camera access to capture your cricket technique and posture.
         </Text>
-        <TouchableOpacity 
-          style={styles.grantButton} 
+        <TouchableOpacity
+          style={styles.grantButton}
           onPress={async () => {
             await requestPermission();
             await requestMicPermission();
@@ -347,11 +384,40 @@ export const CameraRecordScreen: React.FC<CameraRecordScreenProps> = ({ onVideoP
         />
       </CameraView>
 
-      {/* Shot History Entry Point */}
-      {onViewHistory && (
-        <TouchableOpacity style={styles.historyButton} onPress={onViewHistory}>
-          <Text style={styles.historyButtonText}>📊 HISTORY</Text>
-        </TouchableOpacity>
+      {/* Bottom quick actions: history, profile, sign out */}
+      {!isUploading && (
+        <View style={styles.bottomNavBar}>
+          {onViewHistory && (
+            <TouchableOpacity style={styles.bottomNavItem} onPress={onViewHistory} activeOpacity={0.85}>
+              <Text style={styles.bottomNavIcon}>📊</Text>
+              <Text style={styles.bottomNavLabel}>History</Text>
+            </TouchableOpacity>
+          )}
+          {onViewProfile && (
+            <TouchableOpacity style={styles.bottomNavItem} onPress={onViewProfile} activeOpacity={0.85}>
+              <Text style={styles.bottomNavIcon}>👤</Text>
+              <Text style={styles.bottomNavLabel}>Profile</Text>
+            </TouchableOpacity>
+          )}
+          {onSignOut && (
+            <TouchableOpacity style={styles.bottomNavItem} onPress={onSignOut} activeOpacity={0.85}>
+              <Text style={styles.bottomNavIcon}>🚪</Text>
+              <Text style={[styles.bottomNavLabel, styles.bottomNavLabelSignOut]}>Sign out</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
+      {/* Primary Recording Safeguard */}
+      {!isRecording && !isUploading && (
+        <View style={styles.recordingInstructionBanner} pointerEvents="none">
+          <Text style={styles.recordingInstructionText}>
+            🎯 Point camera at the BATSMAN standing in the crease
+          </Text>
+          <Text style={styles.recordingInstructionSubtext}>
+            Not the bowler — film from behind/side of the striker's stumps
+          </Text>
+        </View>
       )}
 
       {/* Batting Stance Selector — helps the AI Coach orient shot direction correctly */}
@@ -460,21 +526,64 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   historyButton: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
     backgroundColor: 'rgba(15, 23, 42, 0.85)',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#334155',
-    zIndex: 21,
   },
   historyButtonText: {
     color: '#38bdf8',
     fontSize: 10,
     fontWeight: 'bold',
+  },
+  topRightActions: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    zIndex: 21,
+    gap: 8,
+    alignItems: 'flex-end',
+  },
+  profileButton: {
+    backgroundColor: 'rgba(15, 23, 42, 0.85)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  profileButtonText: {
+    color: '#10b981',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  recordingInstructionBanner: {
+    position: 'absolute',
+    top: 60,
+    left: 16,
+    right: 16,
+    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+    borderWidth: 1,
+    borderColor: '#10b981',
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    alignItems: 'center',
+    zIndex: 22,
+  },
+  recordingInstructionText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  recordingInstructionSubtext: {
+    color: '#94a3b8',
+    fontSize: 10,
+    textAlign: 'center',
+    marginTop: 3,
   },
   stanceBar: {
     position: 'absolute',
@@ -516,13 +625,45 @@ const styles = StyleSheet.create({
   },
   controlsBar: {
     position: 'absolute',
-    bottom: 34,
+    bottom: 98,
     left: 0,
     right: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 20,
+  },
+  bottomNavBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    backgroundColor: 'rgba(2, 6, 23, 0.95)',
+    borderTopWidth: 1,
+    borderTopColor: '#1e293b',
+    paddingTop: 10,
+    paddingBottom: 14,
+    paddingHorizontal: 12,
+    zIndex: 25,
+  },
+  bottomNavItem: {
+    alignItems: 'center',
+    minWidth: 72,
+    gap: 4,
+  },
+  bottomNavIcon: {
+    fontSize: 22,
+  },
+  bottomNavLabel: {
+    color: '#e2e8f0',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  bottomNavLabelSignOut: {
+    color: '#fca5a5',
   },
   flipButton: {
     position: 'absolute',

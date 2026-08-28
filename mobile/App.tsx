@@ -1,20 +1,64 @@
-import React, { useState } from 'react';
-import { StyleSheet, View, SafeAreaView, StatusBar } from 'react-native';
-import { OnboardingGuideScreen } from './src/screens/OnboardingGuideScreen';
+import React, { useEffect, useState } from 'react';
+import { StyleSheet, SafeAreaView, StatusBar, View, ActivityIndicator, Text } from 'react-native';
+import { ModernOnboardingScreen } from './src/screens/ModernOnboardingScreen';
 import { CameraRecordScreen } from './src/screens/CameraRecordScreen';
 import { VideoAnalysisScreen } from './src/screens/VideoAnalysisScreen';
 import { AuthScreen } from './src/screens/AuthScreen';
 import { ShotHistoryScreen } from './src/screens/ShotHistoryScreen';
+import { ProfileScreen } from './src/screens/ProfileScreen';
+import { SignOutScreen } from './src/screens/SignOutScreen';
+import { markOnboardingDone, restoreAuthSession } from './src/services/api';
+
+type AppScreen = 'LOADING' | 'GUIDE' | 'AUTH' | 'RECORD' | 'ANALYSIS' | 'HISTORY' | 'PROFILE' | 'SIGN_OUT';
 
 export default function App() {
-  const [currentScreen, setCurrentScreen] = useState<'GUIDE' | 'AUTH' | 'RECORD' | 'ANALYSIS' | 'HISTORY'>('GUIDE');
+  const [currentScreen, setCurrentScreen] = useState<AppScreen>('LOADING');
   const [activeReportId, setActiveReportId] = useState<string>('');
   const [activeVideoId, setActiveVideoId] = useState<string>('');
   const [activeVideoUri, setActiveVideoUri] = useState<string>('');
+  const [analysisFromHistory, setAnalysisFromHistory] = useState<boolean>(false);
+  const [historyAccountKey, setHistoryAccountKey] = useState<string>('boot');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const boot = async () => {
+      try {
+        const session = await restoreAuthSession();
+        if (cancelled) return;
+
+        if (!session.onboardingDone) {
+          setCurrentScreen('GUIDE');
+          return;
+        }
+        if (session.isLoggedIn) {
+          setHistoryAccountKey(session.email || 'member');
+          setCurrentScreen('RECORD');
+          return;
+        }
+        setCurrentScreen('AUTH');
+      } catch {
+        if (!cancelled) setCurrentScreen('GUIDE');
+      }
+    };
+
+    boot();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleOnboardingComplete = () => {
+    setCurrentScreen('AUTH');
+    markOnboardingDone().catch((err) => {
+      console.log('Failed to persist onboarding flag', err);
+    });
+  };
 
   const handleVideoProcessed = (reportId: string, videoId: string, videoUri?: string) => {
     setActiveReportId(reportId);
     setActiveVideoId(videoId);
+    setAnalysisFromHistory(false);
     if (videoUri) {
       setActiveVideoUri(videoUri);
     }
@@ -25,34 +69,81 @@ export default function App() {
     setActiveReportId(videoId);
     setActiveVideoId(videoId);
     setActiveVideoUri('');
+    setAnalysisFromHistory(true);
     setCurrentScreen('ANALYSIS');
   };
 
+  const isLightShell =
+    currentScreen === 'GUIDE' ||
+    currentScreen === 'AUTH' ||
+    currentScreen === 'LOADING' ||
+    currentScreen === 'PROFILE' ||
+    currentScreen === 'SIGN_OUT';
+
+  if (currentScreen === 'LOADING') {
+    return (
+      <SafeAreaView style={[styles.container, styles.containerLight]}>
+        <StatusBar barStyle="dark-content" backgroundColor="#faf9f6" />
+        <View style={styles.loadingBox}>
+          <ActivityIndicator size="large" color="#0d9488" />
+          <Text style={styles.loadingText}>Restoring your session...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#000000" />
+    <SafeAreaView style={[styles.container, isLightShell && styles.containerLight]}>
+      <StatusBar
+        barStyle={isLightShell ? 'dark-content' : 'light-content'}
+        backgroundColor={isLightShell ? '#faf9f6' : '#000000'}
+      />
       {currentScreen === 'GUIDE' ? (
-        <OnboardingGuideScreen onComplete={() => setCurrentScreen('AUTH')} />
+        <ModernOnboardingScreen onComplete={handleOnboardingComplete} />
       ) : currentScreen === 'AUTH' ? (
         <AuthScreen
-          onAuthSuccess={() => setCurrentScreen('RECORD')}
-          onSkipGuest={() => setCurrentScreen('RECORD')}
+          onAuthSuccess={(email) => {
+            setHistoryAccountKey(email || `member-${Date.now()}`);
+            setCurrentScreen('RECORD');
+          }}
+          onSkipGuest={() => {
+            setHistoryAccountKey(`guest-${Date.now()}`);
+            setCurrentScreen('RECORD');
+          }}
         />
       ) : currentScreen === 'RECORD' ? (
         <CameraRecordScreen
           onVideoProcessed={handleVideoProcessed}
           onViewHistory={() => setCurrentScreen('HISTORY')}
+          onViewProfile={() => setCurrentScreen('PROFILE')}
+          onSignOut={() => setCurrentScreen('SIGN_OUT')}
         />
       ) : currentScreen === 'HISTORY' ? (
         <ShotHistoryScreen
+          accountKey={historyAccountKey}
           onBack={() => setCurrentScreen('RECORD')}
           onSelectVideo={handleSelectHistoryVideo}
+        />
+      ) : currentScreen === 'PROFILE' ? (
+        <ProfileScreen
+          onBack={() => setCurrentScreen('RECORD')}
+          onViewHistory={() => setCurrentScreen('HISTORY')}
+          onSignOut={() => setCurrentScreen('SIGN_OUT')}
+        />
+      ) : currentScreen === 'SIGN_OUT' ? (
+        <SignOutScreen
+          onCancel={() => setCurrentScreen('RECORD')}
+          onSignedOut={() => {
+            setHistoryAccountKey(`signed-out-${Date.now()}`);
+            setCurrentScreen('AUTH');
+          }}
         />
       ) : (
         <VideoAnalysisScreen
           reportId={activeReportId}
           videoId={activeVideoId}
           videoUri={activeVideoUri}
+          fromHistory={analysisFromHistory}
           onBackToCamera={() => setCurrentScreen('RECORD')}
         />
       )}
@@ -64,5 +155,19 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#000000',
+  },
+  containerLight: {
+    backgroundColor: '#faf9f6',
+  },
+  loadingBox: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  loadingText: {
+    color: '#64748b',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

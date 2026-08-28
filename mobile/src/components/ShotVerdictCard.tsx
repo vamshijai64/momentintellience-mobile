@@ -1,23 +1,23 @@
 import React from 'react';
-import { StyleSheet, View, Text } from 'react-native';
+import { StyleSheet, View, Text, Platform } from 'react-native';
 import { ShotVerdict } from '../types';
 
 interface ShotVerdictCardProps {
   verdict?: ShotVerdict;
 }
 
-const RADIUS = 68;
+const RADIUS = 74;
 
 const VERDICT_THEME: Record<string, { bg: string; text: string; border: string; label: string; icon: string }> = {
-  GOOD_SHOT: { bg: 'rgba(16, 185, 129, 0.15)', text: '#10b981', border: '#10b981', label: 'GOOD SHOT', icon: '✓' },
-  AVERAGE_SHOT: { bg: 'rgba(245, 158, 11, 0.15)', text: '#f59e0b', border: '#f59e0b', label: 'AVERAGE SHOT', icon: '~' },
-  BAD_SHOT: { bg: 'rgba(239, 68, 68, 0.15)', text: '#ef4444', border: '#ef4444', label: 'BAD SHOT', icon: '✗' },
+  GOOD_SHOT: { bg: 'rgba(16, 185, 129, 0.12)', text: '#34d399', border: '#10b981', label: 'GOOD SHOT', icon: '✓' },
+  AVERAGE_SHOT: { bg: 'rgba(245, 158, 11, 0.12)', text: '#fbbf24', border: '#f59e0b', label: 'AVERAGE SHOT', icon: '~' },
+  BAD_SHOT: { bg: 'rgba(239, 68, 68, 0.12)', text: '#f87171', border: '#ef4444', label: 'NEEDS WORK', icon: '!' },
 };
 
 const CONFIDENCE_THEME: Record<string, { text: string; label: string }> = {
-  HIGH: { text: '#10b981', label: 'HIGH CONFIDENCE' },
-  MEDIUM: { text: '#f59e0b', label: 'MEDIUM CONFIDENCE' },
-  LOW: { text: '#ef4444', label: 'LOW CONFIDENCE' },
+  HIGH: { text: '#34d399', label: 'High Confidence' },
+  MEDIUM: { text: '#fbbf24', label: 'Medium Confidence' },
+  LOW: { text: '#f87171', label: 'Low Confidence' },
 };
 
 export const ShotVerdictCard: React.FC<ShotVerdictCardProps> = ({ verdict }) => {
@@ -32,44 +32,58 @@ export const ShotVerdictCard: React.FC<ShotVerdictCardProps> = ({ verdict }) => 
   const directionLabel = verdict.shot_direction_label;
 
   return (
-    <View style={[styles.cardContainer, { borderColor: theme.border }]}>
-      {/* AI Coach Verdict Badge */}
-      <View style={[styles.badgeRow, { backgroundColor: theme.bg, borderColor: theme.border }]}>
-        <View>
-          <Text style={styles.badgeEyebrow}>AI COACH VERDICT</Text>
-          <Text style={[styles.badgeLabel, { color: theme.text }]}>
-            {theme.icon} {theme.label}
-          </Text>
+    <View style={styles.cardContainer}>
+      {/* Hero Row: Verdict Identity + Big Score Ring */}
+      <View style={styles.heroRow}>
+        <View style={styles.heroLeft}>
+          <View style={[styles.verdictIconCircle, { backgroundColor: theme.bg, borderColor: theme.border }]}>
+            <Text style={[styles.verdictIconText, { color: theme.text }]}>{theme.icon}</Text>
+          </View>
+          <View style={styles.heroTextCol}>
+            <Text style={styles.badgeEyebrow}>AI COACH VERDICT</Text>
+            <Text style={[styles.badgeLabel, { color: theme.text }]}>{theme.label}</Text>
+            {confidence && (
+              <View style={styles.confidenceRow}>
+                <View style={[styles.confidenceDot, { backgroundColor: confidence.text }]} />
+                <Text style={[styles.confidenceText, { color: confidence.text }]}>{confidence.label}</Text>
+              </View>
+            )}
+          </View>
         </View>
-        <View style={styles.scoreBubble}>
-          <Text style={[styles.scoreBubbleValue, { color: theme.text }]}>
-            {Math.round(verdict.composite_score)}
-          </Text>
-          <Text style={styles.scoreBubbleLabel}>SCORE</Text>
+
+        <View style={[styles.scoreRing, { borderColor: theme.border }]}>
+          <Text style={[styles.scoreRingValue, { color: theme.text }]}>{Math.round(verdict.composite_score)}</Text>
+          <Text style={styles.scoreRingLabel}>SCORE</Text>
         </View>
       </View>
 
-      {confidence && (
-        <View style={styles.confidenceRow}>
-          <View style={[styles.confidenceDot, { backgroundColor: confidence.text }]} />
-          <Text style={[styles.confidenceText, { color: confidence.text }]}>{confidence.label}</Text>
+      {/* Reason Text */}
+      {!!verdict.reason && (
+        <View style={styles.reasonBox}>
+          <Text style={styles.reasonText}>{verdict.reason}</Text>
         </View>
       )}
-
-      {/* Reason Text */}
-      <Text style={styles.reasonText}>{verdict.reason}</Text>
 
       {/* Technique vs Execution Sub-scores */}
       <View style={styles.subScoreRow}>
         <View style={styles.subScoreCard}>
           <Text style={styles.subScoreLabel}>TECHNIQUE</Text>
           <Text style={styles.subScoreValue}>{Math.round(verdict.technique_score)}%</Text>
+          <View style={styles.subScoreTrack}>
+            <View style={[styles.subScoreFill, { width: `${Math.min(100, Math.max(0, verdict.technique_score))}%`, backgroundColor: '#38bdf8' }]} />
+          </View>
         </View>
         <View style={styles.subScoreCard}>
           <Text style={styles.subScoreLabel}>EXECUTION</Text>
           <Text style={styles.subScoreValue}>{Math.round(verdict.execution_score)}%</Text>
+          <View style={styles.subScoreTrack}>
+            <View style={[styles.subScoreFill, { width: `${Math.min(100, Math.max(0, verdict.execution_score))}%`, backgroundColor: '#a78bfa' }]} />
+          </View>
         </View>
       </View>
+
+      {/* Divider */}
+      <View style={styles.divider} />
 
       {/* Estimated Shot Direction Protractor */}
       <Text style={styles.protractorHeader}>ESTIMATED SHOT DIRECTION</Text>
@@ -89,7 +103,7 @@ export const ShotVerdictCard: React.FC<ShotVerdictCardProps> = ({ verdict }) => 
             { transform: [{ rotate: `${needleRotation}deg` }] },
           ]}
         >
-          <View style={styles.needleLine} />
+          <View style={[styles.needleLine, { backgroundColor: theme.border }]} />
         </View>
         <View style={styles.protractorCenterDot} />
 
@@ -97,7 +111,7 @@ export const ShotVerdictCard: React.FC<ShotVerdictCardProps> = ({ verdict }) => 
         <Text style={[styles.protractorTick, styles.tickTop]}>90°</Text>
         <Text style={[styles.protractorTick, styles.tickRight]}>0°</Text>
       </View>
-      <Text style={styles.protractorValue}>{Math.round(shotDirectionDeg)}° (bat swing-plane proxy)</Text>
+      <Text style={[styles.protractorValue, { color: theme.text }]}>{Math.round(shotDirectionDeg)}° bat swing-plane proxy</Text>
       <Text style={styles.protractorDisclaimer}>
         Estimated from bat swing direction at impact, not literal ball-tracking.
       </Text>
@@ -105,56 +119,70 @@ export const ShotVerdictCard: React.FC<ShotVerdictCardProps> = ({ verdict }) => 
   );
 };
 
+const cardShadow = Platform.select({
+  ios: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 14,
+  },
+  android: { elevation: 4 },
+  default: {},
+});
+
 const styles = StyleSheet.create({
   cardContainer: {
-    backgroundColor: '#0f172a',
-    borderRadius: 16,
-    padding: 16,
+    backgroundColor: '#111a2e',
+    borderRadius: 22,
+    padding: 20,
     borderWidth: 1,
-    marginVertical: 12,
+    borderColor: '#1e293b',
+    marginVertical: 10,
+    ...cardShadow,
   },
-  badgeRow: {
+  heroRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    borderRadius: 12,
-    borderWidth: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    justifyContent: 'space-between',
   },
-  badgeEyebrow: {
-    color: '#94a3b8',
-    fontSize: 9,
-    fontWeight: 'bold',
-    letterSpacing: 1,
-    marginBottom: 2,
+  heroLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    paddingRight: 12,
   },
-  badgeLabel: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    letterSpacing: 0.5,
-  },
-  scoreBubble: {
+  verdictIconCircle: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    backgroundColor: 'rgba(2, 6, 23, 0.6)',
+    marginRight: 12,
   },
-  scoreBubbleValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
+  verdictIconText: {
+    fontSize: 20,
+    fontWeight: '800',
   },
-  scoreBubbleLabel: {
+  heroTextCol: {
+    flexShrink: 1,
+  },
+  badgeEyebrow: {
     color: '#64748b',
-    fontSize: 7,
-    fontWeight: 'bold',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    marginBottom: 3,
+  },
+  badgeLabel: {
+    fontSize: 19,
+    fontWeight: '800',
+    letterSpacing: 0.2,
   },
   confidenceRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 5,
   },
   confidenceDot: {
     width: 6,
@@ -163,60 +191,102 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   confidenceText: {
-    fontSize: 9,
-    fontWeight: 'bold',
+    fontSize: 10.5,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  scoreRing: {
+    width: 66,
+    height: 66,
+    borderRadius: 33,
+    borderWidth: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(2, 6, 23, 0.55)',
+  },
+  scoreRingValue: {
+    fontSize: 20,
+    fontWeight: '800',
+  },
+  scoreRingLabel: {
+    color: '#64748b',
+    fontSize: 7.5,
+    fontWeight: '700',
     letterSpacing: 0.5,
+    marginTop: 1,
+  },
+  reasonBox: {
+    backgroundColor: 'rgba(148, 163, 184, 0.08)',
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 16,
   },
   reasonText: {
     color: '#cbd5e1',
-    fontSize: 12,
-    marginTop: 10,
-    lineHeight: 17,
-  },
-  directionHeadline: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginTop: 6,
-    letterSpacing: 0.3,
+    fontSize: 13,
+    lineHeight: 19,
   },
   subScoreRow: {
     flexDirection: 'row',
-    marginTop: 12,
+    marginTop: 14,
     gap: 10,
   },
   subScoreCard: {
     flex: 1,
-    backgroundColor: '#1e293b',
-    borderRadius: 10,
-    paddingVertical: 8,
-    alignItems: 'center',
+    backgroundColor: 'rgba(148, 163, 184, 0.06)',
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
   },
   subScoreLabel: {
     color: '#94a3b8',
-    fontSize: 9,
-    fontWeight: 'bold',
-    letterSpacing: 0.5,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.6,
   },
   subScoreValue: {
     color: '#ffffff',
-    fontSize: 15,
-    fontWeight: 'bold',
-    marginTop: 2,
+    fontSize: 20,
+    fontWeight: '800',
+    marginTop: 4,
+  },
+  subScoreTrack: {
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    marginTop: 8,
+    overflow: 'hidden',
+  },
+  subScoreFill: {
+    height: '100%',
+    borderRadius: 2,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: 'rgba(148, 163, 184, 0.12)',
+    marginTop: 18,
+    marginBottom: 4,
   },
   protractorHeader: {
-    color: '#94a3b8',
-    fontSize: 10,
-    fontWeight: 'bold',
-    letterSpacing: 1,
-    marginTop: 16,
+    color: '#64748b',
+    fontSize: 10.5,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    marginTop: 14,
     textAlign: 'center',
+  },
+  directionHeadline: {
+    fontSize: 16,
+    fontWeight: '800',
+    textAlign: 'center',
+    marginTop: 6,
+    letterSpacing: 0.2,
   },
   protractorWrapper: {
     width: RADIUS * 2,
-    height: RADIUS + 8,
+    height: RADIUS + 10,
     alignSelf: 'center',
-    marginTop: 10,
+    marginTop: 14,
     position: 'relative',
   },
   protractorClip: {
@@ -232,8 +302,8 @@ const styles = StyleSheet.create({
     height: RADIUS * 2,
     borderRadius: RADIUS,
     borderWidth: 2,
-    borderColor: 'rgba(148, 163, 184, 0.5)',
-    backgroundColor: 'rgba(2, 6, 23, 0.5)',
+    borderColor: 'rgba(148, 163, 184, 0.35)',
+    backgroundColor: 'rgba(2, 6, 23, 0.55)',
   },
   needlePivot: {
     position: 'absolute',
@@ -245,32 +315,32 @@ const styles = StyleSheet.create({
   needleLine: {
     position: 'absolute',
     top: 0,
-    left: RADIUS - 1,
-    width: 2,
+    left: RADIUS - 1.5,
+    width: 3,
     height: RADIUS,
-    backgroundColor: '#10b981',
+    borderRadius: 2,
   },
   protractorCenterDot: {
     position: 'absolute',
-    top: RADIUS - 3,
-    left: RADIUS - 3,
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    top: RADIUS - 4,
+    left: RADIUS - 4,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     backgroundColor: '#ffffff',
   },
   protractorTick: {
     position: 'absolute',
-    color: '#64748b',
-    fontSize: 9,
-    fontWeight: 'bold',
+    color: '#475569',
+    fontSize: 9.5,
+    fontWeight: '700',
   },
   tickLeft: {
     left: 0,
     bottom: -2,
   },
   tickTop: {
-    left: RADIUS - 12,
+    left: RADIUS - 13,
     top: -2,
   },
   tickRight: {
@@ -278,17 +348,17 @@ const styles = StyleSheet.create({
     bottom: -2,
   },
   protractorValue: {
-    color: '#10b981',
-    fontSize: 12,
-    fontWeight: 'bold',
+    fontSize: 13,
+    fontWeight: '800',
     textAlign: 'center',
-    marginTop: 8,
+    marginTop: 10,
   },
   protractorDisclaimer: {
     color: '#64748b',
-    fontSize: 9,
+    fontSize: 9.5,
     textAlign: 'center',
     marginTop: 4,
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
+    lineHeight: 13,
   },
 });

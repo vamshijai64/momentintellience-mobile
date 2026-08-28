@@ -10,13 +10,59 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  StatusBar,
 } from 'react-native';
-import { loginUser, registerUser } from '../services/api';
+import { ensureGuestSession, loginUser, registerUser } from '../services/api';
 
 interface AuthScreenProps {
-  onAuthSuccess: () => void;
+  onAuthSuccess: (email?: string) => void;
   onSkipGuest: () => void;
 }
+
+const ACCENT = '#0d9488';
+const ACCENT_SOFT = '#ccfbf1';
+const ACCENT_DEEP = '#0f766e';
+
+/** FastAPI may return detail as string OR array/object — never show [object Object]. */
+const formatAuthError = (error: any, fallback: string): string => {
+  const detail = error?.response?.data?.detail;
+
+  if (typeof detail === 'string' && detail.trim()) {
+    return detail;
+  }
+
+  if (Array.isArray(detail)) {
+    const parts = detail
+      .map((item) => {
+        if (typeof item === 'string') return item;
+        if (item?.msg) {
+          const field = Array.isArray(item.loc) ? item.loc.filter((x: any) => x !== 'body').join(' ') : '';
+          return field ? `${field}: ${item.msg}` : String(item.msg);
+        }
+        return null;
+      })
+      .filter(Boolean);
+    if (parts.length) return parts.join('\n');
+  }
+
+  if (detail && typeof detail === 'object') {
+    if (typeof detail.message === 'string') return detail.message;
+    try {
+      return JSON.stringify(detail);
+    } catch {
+      // ignore
+    }
+  }
+
+  if (typeof error?.message === 'string' && error.message && !error.message.includes('[object Object]')) {
+    if (error.message.includes('Network Error') || error.code === 'ERR_NETWORK') {
+      return 'Cannot reach the server. Check Wi-Fi and that the backend is running.';
+    }
+    return error.message;
+  }
+
+  return fallback;
+};
 
 export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onSkipGuest }) => {
   const [isLogin, setIsLogin] = useState<boolean>(true);
@@ -26,28 +72,51 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onSkipGue
   const [loading, setLoading] = useState<boolean>(false);
 
   const handleSubmit = async () => {
-    if (!email || !password || (!isLogin && !fullName)) {
-      Alert.alert('Missing Fields', 'Please fill in all required credentials.');
+    const trimmedEmail = email.trim().toLowerCase();
+    const trimmedName = fullName.trim();
+
+    if (!trimmedEmail || !password || (!isLogin && !trimmedName)) {
+      Alert.alert('Missing Fields', 'Please fill in all required fields.');
+      return;
+    }
+
+    if (!trimmedEmail.includes('@') || !trimmedEmail.includes('.')) {
+      Alert.alert('Invalid email', 'Please enter a valid email like name@gmail.com');
+      return;
+    }
+
+    if (password.length < 6) {
+      Alert.alert('Weak password', 'Password should be at least 6 characters.');
       return;
     }
 
     setLoading(true);
     try {
       if (isLogin) {
-        await loginUser(email, password);
-        Alert.alert('Welcome Back!', 'Authentication successful.');
+        await loginUser(trimmedEmail, password);
       } else {
-        await registerUser(email, password, fullName);
-        await loginUser(email, password);
-        Alert.alert('Account Created!', 'Your account is ready.');
+        await registerUser(trimmedEmail, password, trimmedName);
+        await loginUser(trimmedEmail, password);
       }
       setLoading(false);
-      onAuthSuccess();
+      onAuthSuccess(trimmedEmail);
     } catch (error: any) {
       setLoading(false);
-      const msg = error.response?.data?.detail || 'Authentication failed. Please check your credentials and server connection.';
-      Alert.alert('Authentication Error', msg);
+      Alert.alert(
+        'Could not continue',
+        formatAuthError(
+          error,
+          'Authentication failed. Please check your details and server connection.'
+        )
+      );
     }
+  };
+
+  const handleContinueAsGuest = () => {
+    // Same as before: go straight to record — never block on auth errors.
+    onSkipGuest();
+    // Best-effort: attach this phone to a guest account so history can save.
+    ensureGuestSession().catch(() => {});
   };
 
   return (
@@ -55,43 +124,50 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onSkipGue
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView contentContainerStyle={styles.contentContainer}>
-        {/* Header Branding */}
+      <StatusBar barStyle="dark-content" backgroundColor="#faf9f6" />
+      <View style={styles.blobTL} />
+      <View style={styles.blobTR} />
+
+      <ScrollView
+        contentContainerStyle={styles.contentContainer}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.headerBox}>
-          <View style={styles.logoBadge}>
-            <Text style={styles.logoText}>⚡ MOMENT</Text>
+          <View style={styles.logoMark}>
+            <Text style={styles.logoEmoji}>🏏</Text>
           </View>
-          <Text style={styles.appTitle}>MOMENT INTELLIGENCE</Text>
+          <Text style={styles.brandName}>AI Cricket Coach</Text>
           <Text style={styles.appSub}>
-            Computer Vision Biomechanical Technique & Posture Analysis
+            Sign in once — your shots stay saved in History even after you close the app
           </Text>
         </View>
 
-        {/* Tab Selector */}
         <View style={styles.tabContainer}>
           <TouchableOpacity
             style={[styles.tabBtn, isLogin && styles.tabBtnActive]}
             onPress={() => setIsLogin(true)}
+            activeOpacity={0.85}
           >
-            <Text style={[styles.tabText, isLogin && styles.tabTextActive]}>SIGN IN</Text>
+            <Text style={[styles.tabText, isLogin && styles.tabTextActive]}>Sign in</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.tabBtn, !isLogin && styles.tabBtnActive]}
             onPress={() => setIsLogin(false)}
+            activeOpacity={0.85}
           >
-            <Text style={[styles.tabText, !isLogin && styles.tabTextActive]}>REGISTER</Text>
+            <Text style={[styles.tabText, !isLogin && styles.tabTextActive]}>Register</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Auth Form Card */}
         <View style={styles.formCard}>
           {!isLogin && (
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>FULL NAME</Text>
+              <Text style={styles.label}>Full name</Text>
               <TextInput
                 style={styles.input}
                 placeholder="e.g. Vishal Sharma"
-                placeholderTextColor="#64748b"
+                placeholderTextColor="#94a3b8"
                 value={fullName}
                 onChangeText={setFullName}
                 autoCapitalize="words"
@@ -100,11 +176,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onSkipGue
           )}
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>EMAIL ADDRESS</Text>
+            <Text style={styles.label}>Email</Text>
             <TextInput
               style={styles.input}
-              placeholder="sai1@gmail.com"
-              placeholderTextColor="#64748b"
+              placeholder="you@email.com"
+              placeholderTextColor="#94a3b8"
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -113,11 +189,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onSkipGue
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>PASSWORD</Text>
+            <Text style={styles.label}>Password</Text>
             <TextInput
               style={styles.input}
-              placeholder="••••••••••••"
-              placeholderTextColor="#64748b"
+              placeholder="••••••••"
+              placeholderTextColor="#94a3b8"
               value={password}
               onChangeText={setPassword}
               secureTextEntry
@@ -128,138 +204,217 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onSkipGue
             style={styles.submitBtn}
             onPress={handleSubmit}
             disabled={loading}
+            activeOpacity={0.88}
           >
             {loading ? (
               <ActivityIndicator color="#ffffff" />
             ) : (
-              <Text style={styles.submitBtnText}>
-                {isLogin ? 'SIGN IN TO ACCOUNT' : 'CREATE FREE ACCOUNT'}
-              </Text>
+              <>
+                <Text style={styles.submitBtnText}>
+                  {isLogin ? 'Sign in' : 'Create account'}
+                </Text>
+                <View style={styles.arrowCircle}>
+                  <Text style={styles.arrow}>→</Text>
+                </View>
+              </>
             )}
           </TouchableOpacity>
-
-          <TouchableOpacity style={styles.guestBtn} onPress={onSkipGuest}>
-            <Text style={styles.guestBtnText}>CONTINUE AS GUEST USER →</Text>
-          </TouchableOpacity>
         </View>
+
+        <TouchableOpacity
+          style={styles.guestBtn}
+          onPress={handleContinueAsGuest}
+          disabled={loading}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.guestBtnText}>Continue as guest</Text>
+        </TouchableOpacity>
+
+        <Text style={styles.footerHint}>
+          Guest mode also saves history on this phone. Sign in to keep it across devices.
+        </Text>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 };
 
+const softShadow = Platform.select({
+  ios: {
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.07,
+    shadowRadius: 16,
+  },
+  android: { elevation: 3 },
+  default: {},
+});
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#020617',
+    backgroundColor: '#faf9f6',
+  },
+  blobTL: {
+    position: 'absolute',
+    top: -70,
+    left: -60,
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: '#99f6e4',
+    opacity: 0.45,
+  },
+  blobTR: {
+    position: 'absolute',
+    top: 80,
+    right: -80,
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    backgroundColor: '#fef3c7',
+    opacity: 0.4,
   },
   contentContainer: {
-    padding: 24,
-    paddingTop: 60,
+    padding: 28,
+    paddingTop: Platform.OS === 'ios' ? 56 : 40,
+    paddingBottom: 40,
   },
   headerBox: {
     alignItems: 'center',
     marginBottom: 28,
   },
-  logoBadge: {
-    backgroundColor: '#1e293b',
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#334155',
+  logoMark: {
+    width: 72,
+    height: 72,
+    borderRadius: 24,
+    backgroundColor: ACCENT_SOFT,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+    borderWidth: 2,
+    borderColor: '#a7f3d0',
   },
-  logoText: {
-    color: '#10b981',
-    fontSize: 12,
-    fontWeight: 'bold',
-    letterSpacing: 1,
+  logoEmoji: {
+    fontSize: 34,
   },
-  appTitle: {
-    color: '#ffffff',
-    fontSize: 22,
-    fontWeight: 'bold',
-    letterSpacing: 0.5,
-    marginBottom: 6,
+  brandName: {
+    color: '#0f172a',
+    fontSize: 26,
+    fontWeight: '800',
+    letterSpacing: -0.4,
+    marginBottom: 8,
   },
   appSub: {
-    color: '#94a3b8',
-    fontSize: 12,
+    color: '#64748b',
+    fontSize: 14,
     textAlign: 'center',
+    lineHeight: 20,
+    paddingHorizontal: 12,
   },
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: '#0f172a',
-    borderRadius: 12,
-    padding: 4,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#1e293b',
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 5,
+    marginBottom: 18,
+    ...softShadow,
   },
   tabBtn: {
     flex: 1,
-    paddingVertical: 10,
+    paddingVertical: 12,
     alignItems: 'center',
-    borderRadius: 8,
+    borderRadius: 12,
   },
   tabBtnActive: {
-    backgroundColor: '#0284c7',
+    backgroundColor: ACCENT,
   },
   tabText: {
-    color: '#94a3b8',
-    fontSize: 12,
-    fontWeight: 'bold',
+    color: '#64748b',
+    fontSize: 14,
+    fontWeight: '700',
   },
   tabTextActive: {
     color: '#ffffff',
   },
   formCard: {
-    backgroundColor: '#0f172a',
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#1e293b',
+    backgroundColor: '#ffffff',
+    borderRadius: 24,
+    padding: 22,
+    ...softShadow,
   },
   inputGroup: {
     marginBottom: 16,
   },
   label: {
-    color: '#94a3b8',
-    fontSize: 10,
-    fontWeight: 'bold',
-    marginBottom: 6,
-    letterSpacing: 0.5,
+    color: '#475569',
+    fontSize: 12,
+    fontWeight: '700',
+    marginBottom: 8,
   },
   input: {
-    backgroundColor: '#1e293b',
-    color: '#ffffff',
-    fontSize: 14,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: '#334155',
+    backgroundColor: '#f8fafc',
+    color: '#0f172a',
+    fontSize: 15,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderWidth: 1.5,
+    borderColor: '#e2e8f0',
   },
   submitBtn: {
-    backgroundColor: '#10b981',
-    paddingVertical: 14,
-    borderRadius: 10,
+    backgroundColor: ACCENT,
+    paddingVertical: 8,
+    paddingLeft: 20,
+    paddingRight: 8,
+    borderRadius: 18,
+    marginTop: 6,
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
+    justifyContent: 'space-between',
+    minHeight: 58,
   },
   submitBtnText: {
     color: '#ffffff',
-    fontSize: 13,
-    fontWeight: 'bold',
-    letterSpacing: 0.5,
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  arrowCircle: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  arrow: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: '800',
   },
   guestBtn: {
-    marginTop: 16,
+    marginTop: 22,
+    alignSelf: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 999,
+    backgroundColor: '#ffffff',
+    borderWidth: 1.5,
+    borderColor: '#e2e8f0',
+    minWidth: 180,
     alignItems: 'center',
   },
   guestBtnText: {
-    color: '#38bdf8',
+    color: ACCENT_DEEP,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  footerHint: {
+    marginTop: 14,
+    textAlign: 'center',
+    color: '#94a3b8',
     fontSize: 12,
-    fontWeight: 'bold',
+    fontWeight: '600',
+    lineHeight: 17,
+    paddingHorizontal: 8,
   },
 });

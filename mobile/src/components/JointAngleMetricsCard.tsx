@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, View, Text } from 'react-native';
+import { StyleSheet, View, Text, Platform } from 'react-native';
 
 interface JointMetric {
   name: string;
@@ -24,6 +24,12 @@ interface JointAngleMetricsCardProps {
   recommendations?: string[];
 }
 
+const STATUS_THEME = {
+  CORRECT: { bg: 'rgba(16, 185, 129, 0.12)', text: '#34d399', border: '#10b981', label: 'IDEAL' },
+  MODERATE: { bg: 'rgba(245, 158, 11, 0.12)', text: '#fbbf24', border: '#f59e0b', label: 'ADJUST' },
+  INCORRECT: { bg: 'rgba(239, 68, 68, 0.12)', text: '#f87171', border: '#ef4444', label: 'OFF TARGET' },
+} as const;
+
 export const JointAngleMetricsCard: React.FC<JointAngleMetricsCardProps> = ({
   metrics,
   overallScore = 88.5,
@@ -33,91 +39,85 @@ export const JointAngleMetricsCard: React.FC<JointAngleMetricsCardProps> = ({
   observations = [],
   recommendations = [],
 }) => {
-  const getStatusColor = (status: 'CORRECT' | 'MODERATE' | 'INCORRECT') => {
-    switch (status) {
-      case 'CORRECT':
-        return { bg: 'rgba(16, 185, 129, 0.15)', text: '#10b981', border: '#10b981' };
-      case 'MODERATE':
-        return { bg: 'rgba(245, 158, 11, 0.15)', text: '#f59e0b', border: '#f59e0b' };
-      case 'INCORRECT':
-        return { bg: 'rgba(239, 68, 68, 0.15)', text: '#ef4444', border: '#ef4444' };
-    }
-  };
+  const scoreColor = overallScore >= 80 ? '#34d399' : overallScore >= 60 ? '#fbbf24' : '#f87171';
+
+  const scoreItems = [
+    { label: 'STABILITY', value: scores.stability },
+    { label: 'BALANCE', value: scores.balance },
+    { label: 'SYMMETRY', value: scores.symmetry },
+    { label: 'MOBILITY', value: scores.mobility },
+  ];
 
   return (
     <View style={styles.cardContainer}>
       {/* Top Header Summary */}
       <View style={styles.headerRow}>
-        <View>
+        <View style={styles.headerLeft}>
           <Text style={styles.shotBadgeTitle}>SHOT DETECTED</Text>
-          <Text style={styles.shotTypeTitle}>{shotType}</Text>
+          <Text style={styles.shotTypeTitle} numberOfLines={1}>{shotType}</Text>
         </View>
 
         <View style={styles.scoreContainer}>
-          <Text style={styles.scoreNumber}>{overallScore.toFixed(0)}%</Text>
+          <Text style={[styles.scoreNumber, { color: scoreColor }]}>{overallScore.toFixed(0)}%</Text>
           <Text style={styles.scoreLabel}>BIOMECHANIC FORM</Text>
         </View>
       </View>
 
       {/* 4-Factor Movement Analytics Score Cards Grid */}
-      <Text style={styles.sectionTitle}>4-FACTOR MOVEMENT KINEMATIC SCORES</Text>
+      <Text style={styles.sectionTitle}>MOVEMENT KINEMATIC SCORES</Text>
       <View style={styles.scoresGrid}>
-        <View style={styles.scoreCard}>
-          <Text style={styles.scoreCardLabel}>STABILITY</Text>
-          <Text style={[styles.scoreCardVal, { color: scores.stability >= 80 ? '#10b981' : '#f59e0b' }]}>
-            {scores.stability.toFixed(0)}%
-          </Text>
-        </View>
-        <View style={styles.scoreCard}>
-          <Text style={styles.scoreCardLabel}>BALANCE</Text>
-          <Text style={[styles.scoreCardVal, { color: scores.balance >= 80 ? '#10b981' : '#f59e0b' }]}>
-            {scores.balance.toFixed(0)}%
-          </Text>
-        </View>
-        <View style={styles.scoreCard}>
-          <Text style={styles.scoreCardLabel}>SYMMETRY</Text>
-          <Text style={[styles.scoreCardVal, { color: scores.symmetry >= 80 ? '#10b981' : '#f59e0b' }]}>
-            {scores.symmetry.toFixed(0)}%
-          </Text>
-        </View>
-        <View style={styles.scoreCard}>
-          <Text style={styles.scoreCardLabel}>MOBILITY</Text>
-          <Text style={[styles.scoreCardVal, { color: scores.mobility >= 80 ? '#10b981' : '#f59e0b' }]}>
-            {scores.mobility.toFixed(0)}%
-          </Text>
-        </View>
+        {scoreItems.map((item) => {
+          const color = item.value >= 80 ? '#34d399' : item.value >= 55 ? '#fbbf24' : '#f87171';
+          return (
+            <View key={item.label} style={styles.scoreCard}>
+              <Text style={styles.scoreCardLabel}>{item.label}</Text>
+              <Text style={[styles.scoreCardVal, { color }]}>{item.value.toFixed(0)}%</Text>
+              <View style={styles.scoreCardTrack}>
+                <View style={[styles.scoreCardFill, { width: `${Math.min(100, Math.max(0, item.value))}%`, backgroundColor: color }]} />
+              </View>
+            </View>
+          );
+        })}
       </View>
 
       {/* Technique Flaw Alert Banner if needed */}
       {flawSummary ? (
         <View style={styles.flawBanner}>
-          <Text style={styles.flawTitle}>AI HUMAN COACH STANCE AUDIT & CORRECTION:</Text>
+          <Text style={styles.flawTitle}>COACH STANCE AUDIT</Text>
           <Text style={styles.flawText}>{flawSummary}</Text>
         </View>
       ) : null}
 
       {/* Human Coach Practice Drills / Recommendations Box */}
       <View style={styles.drillsContainer}>
-        <Text style={styles.drillsHeader}>RECOMMENDED AI COACH PRACTICE DRILLS:</Text>
+        <Text style={styles.drillsHeader}>RECOMMENDED PRACTICE DRILLS</Text>
         {recommendations.length > 0 ? (
           recommendations.map((rec, i) => (
             <View key={i} style={styles.drillItem}>
-              <Text style={styles.drillBullet}>🏏</Text>
+              <View style={styles.drillBulletCircle}>
+                <Text style={styles.drillBullet}>🏏</Text>
+              </View>
               <Text style={styles.drillText}>{rec}</Text>
             </View>
           ))
         ) : (
           <>
             <View style={styles.drillItem}>
-              <Text style={styles.drillBullet}>🏏</Text>
+              <View style={styles.drillBulletCircle}>
+                <Text style={styles.drillBullet}>🏏</Text>
+              </View>
               <Text style={styles.drillText}>
-                <Text style={styles.drillBold}>Tennis Ball Under Chin:</Text> Hold a tennis ball under chin during backlift and drop it at impact to lock head over ball.
+                <Text style={styles.drillBold}>Tennis Ball Under Chin: </Text>
+                Hold a tennis ball under chin during backlift and drop it at impact to lock head over ball.
               </Text>
             </View>
             <View style={styles.drillItem}>
-              <Text style={styles.drillBullet}>🏏</Text>
+              <View style={styles.drillBulletCircle}>
+                <Text style={styles.drillBullet}>🏏</Text>
+              </View>
               <Text style={styles.drillText}>
-                <Text style={styles.drillBold}>Mirror Shadow Drives:</Text> Practice 20 shadow drives in front of mirror, holding lead elbow high towards mid-off.
+                <Text style={styles.drillBold}>Mirror Shadow Drives: </Text>
+                Practice 20 shadow drives in front of a mirror, holding the lead elbow high toward mid-off.
               </Text>
             </View>
           </>
@@ -126,200 +126,247 @@ export const JointAngleMetricsCard: React.FC<JointAngleMetricsCardProps> = ({
 
       {/* Metrics List */}
       <Text style={styles.sectionTitle}>JOINT KINEMATIC MEASUREMENTS</Text>
-      {metrics.map((item: JointMetric, index: number) => {
-        const theme = getStatusColor(item.status);
-        return (
-          <View key={index} style={[styles.metricRow, { borderColor: theme.border }]}>
-            <View style={styles.metricInfo}>
-              <Text style={styles.metricName}>{item.name}</Text>
-              <Text style={styles.idealRangeText}>Target: {item.idealRange}</Text>
-            </View>
+      <View style={styles.metricsList}>
+        {metrics.map((item: JointMetric, index: number) => {
+          const theme = STATUS_THEME[item.status];
+          return (
+            <View key={index} style={styles.metricRow}>
+              <View style={[styles.metricAccent, { backgroundColor: theme.border }]} />
+              <View style={styles.metricInfo}>
+                <Text style={styles.metricName}>{item.name}</Text>
+                <Text style={styles.idealRangeText}>Target {item.idealRange}</Text>
+              </View>
 
-            <View style={styles.valueContainer}>
-              <Text style={[styles.angleValue, { color: theme.text }]}>
-                {item.angle.toFixed(0)}°
-              </Text>
-              <View style={[styles.statusBadge, { backgroundColor: theme.bg, borderColor: theme.border }]}>
-                <Text style={[styles.statusText, { color: theme.text }]}>
-                  {item.status === 'CORRECT' ? 'IDEAL [GREEN]' : item.status === 'INCORRECT' ? 'WRONG [RED]' : 'ADJUST'}
+              <View style={styles.valueContainer}>
+                <Text style={[styles.angleValue, { color: theme.text }]}>
+                  {item.angle.toFixed(0)}°
                 </Text>
+                <View style={[styles.statusBadge, { backgroundColor: theme.bg, borderColor: theme.border }]}>
+                  <Text style={[styles.statusText, { color: theme.text }]}>{theme.label}</Text>
+                </View>
               </View>
             </View>
-          </View>
-        );
-      })}
+          );
+        })}
+      </View>
     </View>
   );
 };
 
+const cardShadow = Platform.select({
+  ios: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 14,
+  },
+  android: { elevation: 4 },
+  default: {},
+});
+
 const styles = StyleSheet.create({
   cardContainer: {
-    backgroundColor: '#0f172a',
-    borderRadius: 16,
-    padding: 16,
+    backgroundColor: '#111a2e',
+    borderRadius: 22,
+    padding: 20,
     borderWidth: 1,
     borderColor: '#1e293b',
-    marginVertical: 12,
+    marginVertical: 10,
+    ...cardShadow,
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
+    alignItems: 'flex-start',
+    marginBottom: 18,
+    paddingBottom: 16,
     borderBottomWidth: 1,
-    borderColor: '#1e293b',
-    paddingBottom: 12,
+    borderColor: 'rgba(148, 163, 184, 0.12)',
+  },
+  headerLeft: {
+    flex: 1,
+    paddingRight: 12,
   },
   shotBadgeTitle: {
-    color: '#0284c7',
-    fontSize: 10,
-    fontWeight: 'bold',
-    letterSpacing: 1,
+    color: '#38bdf8',
+    fontSize: 10.5,
+    fontWeight: '700',
+    letterSpacing: 1.2,
   },
   shotTypeTitle: {
     color: '#ffffff',
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginTop: 2,
+    fontSize: 20,
+    fontWeight: '800',
+    marginTop: 4,
   },
   scoreContainer: {
     alignItems: 'flex-end',
   },
   scoreNumber: {
-    color: '#10b981',
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 26,
+    fontWeight: '800',
   },
   scoreLabel: {
-    color: '#94a3b8',
-    fontSize: 8,
-    fontWeight: 'bold',
+    color: '#64748b',
+    fontSize: 8.5,
+    fontWeight: '700',
     letterSpacing: 0.5,
-  },
-  flawBanner: {
-    backgroundColor: 'rgba(239, 68, 68, 0.12)',
-    borderRadius: 8,
-    padding: 10,
-    borderLeftWidth: 4,
-    borderColor: '#ef4444',
-    marginBottom: 14,
-  },
-  flawTitle: {
-    color: '#ef4444',
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-  flawText: {
-    color: '#f87171',
-    fontSize: 12,
     marginTop: 2,
   },
   sectionTitle: {
     color: '#64748b',
-    fontSize: 10,
-    fontWeight: 'bold',
-    letterSpacing: 1,
-    marginBottom: 10,
+    fontSize: 10.5,
+    fontWeight: '700',
+    letterSpacing: 1.1,
+    marginBottom: 12,
+  },
+  metricsList: {
+    gap: 10,
   },
   metricRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#1e293b',
-    padding: 12,
-    borderRadius: 10,
-    borderLeftWidth: 3,
-    marginBottom: 8,
+    backgroundColor: 'rgba(148, 163, 184, 0.06)',
+    padding: 14,
+    borderRadius: 14,
+    overflow: 'hidden',
+  },
+  metricAccent: {
+    width: 4,
+    alignSelf: 'stretch',
+    borderRadius: 2,
+    marginRight: 12,
   },
   metricInfo: {
     flex: 1,
   },
   metricName: {
     color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 14.5,
+    fontWeight: '700',
   },
   idealRangeText: {
     color: '#94a3b8',
-    fontSize: 11,
-    marginTop: 2,
+    fontSize: 11.5,
+    marginTop: 3,
   },
   valueContainer: {
     alignItems: 'flex-end',
   },
   angleValue: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 18,
+    fontWeight: '800',
   },
   statusBadge: {
-    paddingHorizontal: 8,
+    paddingHorizontal: 9,
     paddingVertical: 3,
-    borderRadius: 6,
+    borderRadius: 999,
     borderWidth: 1,
-    marginTop: 4,
+    marginTop: 5,
   },
   statusText: {
     fontSize: 9,
-    fontWeight: 'bold',
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
+  flawBanner: {
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.25)',
+  },
+  flawTitle: {
+    color: '#f87171',
+    fontSize: 10.5,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+  },
+  flawText: {
+    color: '#fca5a5',
+    fontSize: 13,
+    marginTop: 5,
+    lineHeight: 18,
   },
   drillsContainer: {
-    backgroundColor: '#1e293b',
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 14,
-    borderLeftWidth: 3,
-    borderColor: '#38bdf8',
+    backgroundColor: 'rgba(56, 189, 248, 0.06)',
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(56, 189, 248, 0.18)',
   },
   drillsHeader: {
     color: '#38bdf8',
-    fontSize: 10,
-    fontWeight: 'bold',
-    letterSpacing: 0.5,
-    marginBottom: 8,
+    fontSize: 10.5,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    marginBottom: 10,
   },
   drillItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 6,
+    marginBottom: 10,
+  },
+  drillBulletCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: 'rgba(56, 189, 248, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+    marginTop: 1,
   },
   drillBullet: {
-    fontSize: 12,
-    marginRight: 6,
+    fontSize: 11,
   },
   drillText: {
     color: '#cbd5e1',
-    fontSize: 11,
+    fontSize: 12.5,
     flex: 1,
-    lineHeight: 16,
+    lineHeight: 18,
   },
   drillBold: {
     color: '#ffffff',
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   scoresGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 14,
+    marginBottom: 18,
+    gap: 8,
   },
   scoreCard: {
     flex: 1,
-    backgroundColor: '#1e293b',
-    borderRadius: 8,
-    padding: 8,
+    backgroundColor: 'rgba(148, 163, 184, 0.06)',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 6,
     alignItems: 'center',
-    marginHorizontal: 3,
-    borderWidth: 1,
-    borderColor: '#334155',
   },
   scoreCardLabel: {
     color: '#94a3b8',
     fontSize: 8,
-    fontWeight: 'bold',
-    letterSpacing: 0.5,
+    fontWeight: '700',
+    letterSpacing: 0.4,
   },
   scoreCardVal: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    marginTop: 4,
+    fontSize: 15,
+    fontWeight: '800',
+    marginTop: 5,
+  },
+  scoreCardTrack: {
+    width: '100%',
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    marginTop: 8,
+    overflow: 'hidden',
+  },
+  scoreCardFill: {
+    height: '100%',
+    borderRadius: 1.5,
   },
 });
