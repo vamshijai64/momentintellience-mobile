@@ -11,6 +11,7 @@ import {
   Platform,
   ScrollView,
   StatusBar,
+  Image,
 } from 'react-native';
 import { ensureGuestSession, loginUser, registerUser } from '../services/api';
 
@@ -134,9 +135,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onSkipGue
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.headerBox}>
-          <View style={styles.logoMark}>
-            <Text style={styles.logoEmoji}>🏏</Text>
-          </View>
+          <Image
+            source={require('../../assets/cricsense_logo_transparent.png')}
+            style={styles.brandLogo}
+            resizeMode="contain"
+          />
           <Text style={styles.brandName}>AI Cricket Coach</Text>
           <Text style={styles.appSub}>
             Sign in once — your shots stay saved in History even after you close the app
@@ -283,19 +286,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 28,
   },
-  logoMark: {
-    width: 72,
-    height: 72,
-    borderRadius: 24,
-    backgroundColor: ACCENT_SOFT,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-    borderWidth: 2,
-    borderColor: '#a7f3d0',
-  },
-  logoEmoji: {
-    fontSize: 34,
+  brandLogo: {
+    width: 160,
+    height: 90,
+    marginBottom: 12,
   },
   brandName: {
     color: '#0f172a',

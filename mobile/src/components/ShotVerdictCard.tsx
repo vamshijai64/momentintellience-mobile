@@ -27,7 +27,8 @@ export const ShotVerdictCard: React.FC<ShotVerdictCardProps> = ({ verdict }) => 
 
   const theme = VERDICT_THEME[verdict.verdict] || VERDICT_THEME.AVERAGE_SHOT;
   const shotDirectionDeg = Math.max(0, Math.min(180, verdict.shot_direction_deg ?? 90));
-  const needleRotation = 90 - shotDirectionDeg;
+  // 0° (Off-side / Cover) on LEFT, 90° (Straight) on TOP, 180° (Leg-side / Fine Leg) on RIGHT
+  const needleRotation = -(90 - shotDirectionDeg);
   const confidence = verdict.verdict_confidence ? CONFIDENCE_THEME[verdict.verdict_confidence] : null;
   const directionLabel = verdict.shot_direction_label;
 
@@ -81,40 +82,6 @@ export const ShotVerdictCard: React.FC<ShotVerdictCardProps> = ({ verdict }) => 
           </View>
         </View>
       </View>
-
-      {/* Divider */}
-      <View style={styles.divider} />
-
-      {/* Estimated Shot Direction Protractor */}
-      <Text style={styles.protractorHeader}>ESTIMATED SHOT DIRECTION</Text>
-      {directionLabel && (
-        <Text style={[styles.directionHeadline, { color: theme.text }]}>
-          Played through {directionLabel}
-        </Text>
-      )}
-      <View style={styles.protractorWrapper}>
-        <View style={styles.protractorClip}>
-          <View style={styles.protractorCircle} />
-        </View>
-
-        <View
-          style={[
-            styles.needlePivot,
-            { transform: [{ rotate: `${needleRotation}deg` }] },
-          ]}
-        >
-          <View style={[styles.needleLine, { backgroundColor: theme.border }]} />
-        </View>
-        <View style={styles.protractorCenterDot} />
-
-        <Text style={[styles.protractorTick, styles.tickLeft]}>180°</Text>
-        <Text style={[styles.protractorTick, styles.tickTop]}>90°</Text>
-        <Text style={[styles.protractorTick, styles.tickRight]}>0°</Text>
-      </View>
-      <Text style={[styles.protractorValue, { color: theme.text }]}>{Math.round(shotDirectionDeg)}° bat swing-plane proxy</Text>
-      <Text style={styles.protractorDisclaimer}>
-        Estimated from bat swing direction at impact, not literal ball-tracking.
-      </Text>
     </View>
   );
 };

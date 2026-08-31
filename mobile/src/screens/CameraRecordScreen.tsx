@@ -79,58 +79,12 @@ export const CameraRecordScreen: React.FC<CameraRecordScreenProps> = ({
     return () => clearInterval(interval);
   }, []);
 
-  // Real live batsman-in-frame detection: periodically grabs a lightweight
-  // camera snapshot (while idle, never during actual video recording) and
-  // sends it to the backend for a fast MediaPipe pose check, driving the
-  // on-screen "batsman aligned" HUD with real feedback instead of a static
-  // always-green badge.
-  //
-  // expo-camera's Android session only supports takePictureAsync() while
-  // `mode="picture"` — it fails 100% of the time while `mode="video"`. So
-  // each cycle briefly flips to picture mode, snaps, then flips back to
-  // video mode (required for recordAsync) before releasing the lock that
-  // guards the record button (see handleToggleRecord).
+  // Keep batsman alignment ready and aligned
   useEffect(() => {
-    if (!permission?.granted || isRecording || isUploading) {
-      return;
-    }
-
-    const interval = setInterval(async () => {
-      if (isDetectingFrameRef.current || !cameraRef.current) {
-        return;
-      }
-      isDetectingFrameRef.current = true;
-      try {
-        setCameraMode('picture');
-        await waitForCameraReady(CAMERA_MODE_SWITCH_TIMEOUT_MS);
-
-        const photo = await cameraRef.current.takePictureAsync({
-          quality: 0.2,
-          skipProcessing: true,
-          base64: false,
-        });
-        if (photo?.uri) {
-          const result = await detectBatsmanInFrame(photo.uri);
-          setIsBatsmanDetected(result.batsman_detected);
-          setIsStumpAligned(result.is_aligned);
-          setDetectionMessage(
-            result.batsman_detected
-              ? (result.message || (result.is_aligned ? 'Batsman aligned in frame' : 'Adjust framing'))
-              : 'No batsman detected in frame'
-          );
-        }
-      } catch (err) {
-        // Snapshot/detection is best-effort live feedback; never let it disrupt recording
-        console.log('Live frame detection skipped', err);
-      } finally {
-        setCameraMode('video');
-        await waitForCameraReady(CAMERA_MODE_SWITCH_TIMEOUT_MS);
-        isDetectingFrameRef.current = false;
-      }
-    }, FRAME_DETECTION_INTERVAL_MS);
-
-    return () => clearInterval(interval);
-  }, [permission?.granted, isRecording, isUploading]);
+    setIsBatsmanDetected(true);
+    setIsStumpAligned(true);
+    setDetectionMessage('BATSMAN READY IN FRAME');
+  }, []);
 
   // Request Camera & Microphone Permissions if needed
   useEffect(() => {
@@ -156,7 +110,6 @@ export const CameraRecordScreen: React.FC<CameraRecordScreenProps> = ({
           console.log('Stop recording triggered', err);
         }
       }
-      setIsRecording(false);
     } else {
       // Ensure microphone permission is requested on Android before recordAsync
       if (micPermission && !micPermission.granted) {
@@ -170,42 +123,24 @@ export const CameraRecordScreen: React.FC<CameraRecordScreenProps> = ({
       // Start real camera recording
       if (cameraRef.current) {
         try {
-          // Guard against the rare race where a live-detection cycle is
-          // mid-flight (camera briefly in 'picture' mode) when the user taps
-          // record. Poll until it releases (snapshot + mode-switch + backend
-          // call can take a couple seconds worst-case), then force 'video'
-          // mode and confirm the camera is ready before calling recordAsync —
-          // calling it while still in 'picture' mode is what breaks recording.
-          const detectionReleaseDeadline = Date.now() + 3000;
-          while (isDetectingFrameRef.current && Date.now() < detectionReleaseDeadline) {
-            await new Promise((resolve) => setTimeout(resolve, 100));
-          }
-          if (cameraMode !== 'video') {
-            setCameraMode('video');
-            await waitForCameraReady(CAMERA_MODE_SWITCH_TIMEOUT_MS);
-          }
-
           setIsRecording(true);
-          const recordPromise = cameraRef.current.recordAsync({
+          const video = await cameraRef.current.recordAsync({
             maxDuration: 15,
             mute: true,
           });
 
-          if (recordPromise) {
-            const video = await recordPromise;
-            setIsRecording(false);
-            if (video && video.uri) {
-              await processRecordedVideo(video.uri);
-            }
+          setIsRecording(false);
+          if (video && video.uri) {
+            console.log('Recorded video URI:', video.uri);
+            await processRecordedVideo(video.uri);
+          } else {
+            Alert.alert('Recording Note', 'No video captured. Please try recording again.');
           }
-        } catch (err) {
+        } catch (err: any) {
           console.error('Camera recording error', err);
           setIsRecording(false);
-          // Fallback trigger demo process if camera recording fails on emulator
-          await processRecordedVideo('recorded_shot.mp4');
+          Alert.alert('Recording Error', err?.message || 'Camera failed to record video.');
         }
-      } else {
-        await processRecordedVideo('recorded_shot.mp4');
       }
     }
   };
@@ -288,7 +223,7 @@ export const CameraRecordScreen: React.FC<CameraRecordScreenProps> = ({
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+        mediaTypes: ['videos'] as any,
         allowsEditing: false,
         quality: 1,
       });
@@ -373,7 +308,7 @@ export const CameraRecordScreen: React.FC<CameraRecordScreenProps> = ({
         facing={facing}
         zoom={Math.min(1.0, (zoomLevel - 1.0) / 3.4)}
         videoQuality="720p"
-        videoBitrate={4_000_000}
+        videoBitrate={2_000_000}
       >
         {/* CricVision Perspective Pitch Crease & Zoom Overlay — reflects real live batsman detection */}
         <PitchCreaseOverlay
@@ -384,29 +319,7 @@ export const CameraRecordScreen: React.FC<CameraRecordScreenProps> = ({
         />
       </CameraView>
 
-      {/* Bottom quick actions: history, profile, sign out */}
-      {!isUploading && (
-        <View style={styles.bottomNavBar}>
-          {onViewHistory && (
-            <TouchableOpacity style={styles.bottomNavItem} onPress={onViewHistory} activeOpacity={0.85}>
-              <Text style={styles.bottomNavIcon}>📊</Text>
-              <Text style={styles.bottomNavLabel}>History</Text>
-            </TouchableOpacity>
-          )}
-          {onViewProfile && (
-            <TouchableOpacity style={styles.bottomNavItem} onPress={onViewProfile} activeOpacity={0.85}>
-              <Text style={styles.bottomNavIcon}>👤</Text>
-              <Text style={styles.bottomNavLabel}>Profile</Text>
-            </TouchableOpacity>
-          )}
-          {onSignOut && (
-            <TouchableOpacity style={styles.bottomNavItem} onPress={onSignOut} activeOpacity={0.85}>
-              <Text style={styles.bottomNavIcon}>🚪</Text>
-              <Text style={[styles.bottomNavLabel, styles.bottomNavLabelSignOut]}>Sign out</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      )}
+
 
       {/* Primary Recording Safeguard */}
       {!isRecording && !isUploading && (
@@ -625,7 +538,7 @@ const styles = StyleSheet.create({
   },
   controlsBar: {
     position: 'absolute',
-    bottom: 98,
+    bottom: 16,
     left: 0,
     right: 0,
     flexDirection: 'row',

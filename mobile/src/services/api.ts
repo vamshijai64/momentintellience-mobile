@@ -151,7 +151,7 @@ export const registerUser = async (email: string, password: string, fullName: st
     email,
     password,
     full_name: fullName,
-  });
+  }, { timeout: 10000 });
   return response.data;
 };
 
@@ -162,6 +162,7 @@ export const loginUser = async (email: string, password: string) => {
   params.append('password', password);
   const response = await apiClient.post('/auth/login', params, {
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    timeout: 10000,
   });
   if (response.data?.access_token) {
     const name = response.data?.user?.full_name;
@@ -189,7 +190,7 @@ export const ensureGuestSession = async (): Promise<void> => {
 
   const createFreshGuest = async () => {
     const suffix = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
-    const guestEmail = `guest_${suffix}@ai-cricket-coach.local`;
+    const guestEmail = `guest_${suffix}@cricketcoach.com`;
     const guestPassword = `Guest_${suffix}_Safe1`;
     await AsyncStorage.setItem(GUEST_EMAIL_KEY, guestEmail);
     await AsyncStorage.setItem(GUEST_PASSWORD_KEY, guestPassword);
@@ -314,7 +315,7 @@ export interface PollStatusUpdate {
 
 export const pollForAnalysisResult = async (
   videoId: string,
-  maxAttempts: number = 90,
+  maxAttempts: number = 180,
   intervalMs: number = 2000,
   onStatusUpdate?: (update: PollStatusUpdate) => void
 ): Promise<AnalysisReport> => {
