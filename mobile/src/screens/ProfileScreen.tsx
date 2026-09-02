@@ -18,16 +18,18 @@ import {
 interface ProfileScreenProps {
   onBack: () => void;
   onViewHistory: () => void;
+  onViewGuide?: () => void;
   onSignOut: () => void;
 }
 
-const ACCENT = '#0d9488';
-const ACCENT_SOFT = '#ccfbf1';
-const ACCENT_DEEP = '#0f766e';
+const ACCENT = '#38bdf8';
+const ACCENT_SOFT = 'rgba(56, 189, 248, 0.15)';
+const ACCENT_DEEP = '#0284c7';
 
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   onBack,
   onViewHistory,
+  onViewGuide,
   onSignOut,
 }) => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -43,12 +45,12 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       setProfile(user);
       try {
         const history = await getShotHistory();
-        setSessionCount(history?.length || 0);
+        setSessionCount(Array.isArray(history) ? history.length : 0);
       } catch {
         setSessionCount(0);
       }
     } catch (err: any) {
-      setError(err?.message || 'Could not load profile. Check backend connection.');
+      setError(err?.message || 'Could not load profile');
     } finally {
       setLoading(false);
     }
@@ -61,24 +63,25 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const isGuest = (profile?.email || '').includes('@ai-cricket-coach.local');
   const initials = (profile?.full_name || profile?.email || 'P')
     .split(' ')
-    .map((p) => p[0])
-    .join('')
+    .filter(Boolean)
     .slice(0, 2)
-    .toUpperCase();
+    .map((s) => s[0]?.toUpperCase())
+    .join('') || 'P';
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#faf9f6" />
-      <View style={styles.blobTL} />
-      <View style={styles.blobTR} />
+      <StatusBar barStyle="light-content" backgroundColor="#060b14" />
+      <View style={styles.blobCyan} />
+      <View style={styles.blobBlue} />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.headerBar}>
           <TouchableOpacity style={styles.backButton} onPress={onBack} activeOpacity={0.8}>
-            <Text style={styles.backButtonText}>← Back</Text>
+            <Text style={styles.backArrow}>←</Text>
+            <Text style={styles.backText}>Camera</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Profile</Text>
-          <View style={{ width: 72 }} />
+          <Text style={styles.headerTitle}>Player Profile</Text>
+          <View style={{ width: 60 }} />
         </View>
 
         {loading ? (
@@ -103,7 +106,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               <Text style={styles.emailText}>{profile?.email}</Text>
               <View style={[styles.badge, isGuest ? styles.badgeGuest : styles.badgeMember]}>
                 <Text style={[styles.badgeText, isGuest ? styles.badgeGuestText : styles.badgeMemberText]}>
-                  {isGuest ? 'Guest on this phone' : 'Signed-in member'}
+                  {isGuest ? 'Guest on this device' : 'Signed-in member'}
                 </Text>
               </View>
             </View>
@@ -111,18 +114,18 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             <View style={styles.statsRow}>
               <View style={styles.statCard}>
                 <Text style={styles.statValue}>{sessionCount}</Text>
-                <Text style={styles.statLabel}>Saved sessions</Text>
+                <Text style={styles.statLabel}>Saved Sessions</Text>
               </View>
               <View style={styles.statCard}>
-                <Text style={styles.statValue}>{profile?.is_active === false ? 'Off' : 'On'}</Text>
-                <Text style={styles.statLabel}>Account status</Text>
+                <Text style={styles.statValue}>{profile?.is_active === false ? 'Off' : 'Active'}</Text>
+                <Text style={styles.statLabel}>AI Cloud Status</Text>
               </View>
             </View>
 
-            <Text style={styles.sectionTitle}>Account</Text>
+            <Text style={styles.sectionTitle}>Account Details</Text>
             <View style={styles.menuCard}>
               <View style={styles.menuRow}>
-                <Text style={styles.menuLabel}>Full name</Text>
+                <Text style={styles.menuLabel}>Full Name</Text>
                 <Text style={styles.menuValue}>{profile?.full_name || '—'}</Text>
               </View>
               <View style={styles.divider} />
@@ -136,7 +139,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 <>
                   <View style={styles.divider} />
                   <View style={styles.menuRow}>
-                    <Text style={styles.menuLabel}>Joined</Text>
+                    <Text style={styles.menuLabel}>Member Since</Text>
                     <Text style={styles.menuValue}>
                       {new Date(profile.created_at).toLocaleDateString()}
                     </Text>
@@ -146,12 +149,18 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             </View>
 
             <TouchableOpacity style={styles.primaryBtn} onPress={onViewHistory} activeOpacity={0.88}>
-              <Text style={styles.primaryBtnText}>Open shot history</Text>
+              <Text style={styles.primaryBtnText}>Open Shot History & Analytics</Text>
               <Text style={styles.primaryBtnArrow}>→</Text>
             </TouchableOpacity>
 
+            {onViewGuide && (
+              <TouchableOpacity style={styles.guideBtn} onPress={onViewGuide} activeOpacity={0.85}>
+                <Text style={styles.guideBtnText}>📖 Replay Batting & Framing Guide</Text>
+              </TouchableOpacity>
+            )}
+
             <TouchableOpacity style={styles.logoutBtn} onPress={onSignOut} activeOpacity={0.85}>
-              <Text style={styles.logoutBtnText}>Sign out</Text>
+              <Text style={styles.logoutBtnText}>Sign Out</Text>
             </TouchableOpacity>
           </>
         )}
@@ -174,32 +183,30 @@ const softShadow = Platform.select({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#faf9f6',
+    backgroundColor: '#060b14',
   },
-  blobTL: {
+  blobCyan: {
     position: 'absolute',
     top: -70,
     left: -60,
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: '#99f6e4',
-    opacity: 0.4,
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: 'rgba(56, 189, 248, 0.12)',
   },
-  blobTR: {
+  blobBlue: {
     position: 'absolute',
     top: 60,
     right: -70,
-    width: 160,
-    height: 160,
-    borderRadius: 80,
-    backgroundColor: '#fef3c7',
-    opacity: 0.35,
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    backgroundColor: 'rgba(2, 132, 199, 0.1)',
   },
   content: {
     padding: 24,
     paddingTop: Platform.OS === 'ios' ? 20 : 28,
-    paddingBottom: 40,
+    paddingBottom: 110,
   },
   headerBar: {
     flexDirection: 'row',
@@ -208,22 +215,31 @@ const styles = StyleSheet.create({
     marginBottom: 22,
   },
   backButton: {
-    backgroundColor: '#ffffff',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    gap: 6,
   },
-  backButtonText: {
-    color: ACCENT_DEEP,
-    fontSize: 13,
+  backArrow: {
+    color: '#38bdf8',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  backText: {
+    color: '#e2e8f0',
+    fontSize: 12,
     fontWeight: '700',
   },
   headerTitle: {
-    color: '#0f172a',
+    color: '#ffffff',
     fontSize: 16,
     fontWeight: '800',
+    letterSpacing: 0.5,
   },
   centerBox: {
     alignItems: 'center',
@@ -231,18 +247,18 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   loadingText: {
-    color: '#64748b',
+    color: '#94a3b8',
     fontSize: 13,
     fontWeight: '600',
   },
   errorText: {
-    color: '#be123c',
+    color: '#f87171',
     fontSize: 14,
     textAlign: 'center',
     paddingHorizontal: 16,
   },
   retryBtn: {
-    backgroundColor: ACCENT,
+    backgroundColor: '#0284c7',
     paddingHorizontal: 18,
     paddingVertical: 10,
     borderRadius: 12,
@@ -252,78 +268,86 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   heroCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#0a1224',
     borderRadius: 24,
     padding: 24,
     alignItems: 'center',
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(56, 189, 248, 0.25)',
     ...softShadow,
   },
   avatar: {
     width: 76,
     height: 76,
     borderRadius: 28,
-    backgroundColor: ACCENT_SOFT,
+    backgroundColor: 'rgba(56, 189, 248, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 14,
-    borderWidth: 2,
-    borderColor: '#a7f3d0',
+    borderWidth: 1.5,
+    borderColor: '#38bdf8',
   },
   avatarText: {
-    color: ACCENT_DEEP,
+    color: '#38bdf8',
     fontSize: 24,
     fontWeight: '800',
   },
   nameText: {
-    color: '#0f172a',
-    fontSize: 22,
+    color: '#ffffff',
+    fontSize: 20,
     fontWeight: '800',
     marginBottom: 4,
   },
   emailText: {
-    color: '#64748b',
+    color: '#94a3b8',
     fontSize: 13,
     marginBottom: 12,
   },
   badge: {
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 5,
     borderRadius: 999,
   },
   badgeGuest: {
-    backgroundColor: '#fef3c7',
+    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.3)',
   },
   badgeMember: {
-    backgroundColor: ACCENT_SOFT,
+    backgroundColor: 'rgba(56, 189, 248, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(56, 189, 248, 0.3)',
   },
   badgeText: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: '800',
   },
   badgeGuestText: {
-    color: '#b45309',
+    color: '#fbbf24',
   },
   badgeMemberText: {
-    color: ACCENT_DEEP,
+    color: '#38bdf8',
   },
   statsRow: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 22,
+    marginBottom: 20,
   },
   statCard: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: 'rgba(15, 23, 42, 0.75)',
     borderRadius: 18,
     paddingVertical: 16,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
     ...softShadow,
   },
   statValue: {
-    color: '#0f172a',
+    color: '#ffffff',
     fontSize: 22,
-    fontWeight: '800',
+    fontWeight: '900',
   },
   statLabel: {
     color: '#94a3b8',
@@ -339,10 +363,12 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   menuCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: 'rgba(15, 23, 42, 0.75)',
     borderRadius: 18,
     paddingHorizontal: 16,
     marginBottom: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
     ...softShadow,
   },
   menuRow: {
@@ -353,12 +379,12 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   menuLabel: {
-    color: '#64748b',
+    color: '#94a3b8',
     fontSize: 13,
     fontWeight: '600',
   },
   menuValue: {
-    color: '#0f172a',
+    color: '#ffffff',
     fontSize: 13,
     fontWeight: '700',
     flexShrink: 1,
@@ -366,10 +392,10 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
   },
   primaryBtn: {
-    backgroundColor: ACCENT,
+    backgroundColor: '#0284c7',
     borderRadius: 18,
     paddingVertical: 14,
     paddingHorizontal: 18,
@@ -377,10 +403,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 12,
+    ...softShadow,
   },
   primaryBtnText: {
     color: '#ffffff',
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '800',
   },
   primaryBtnArrow: {
@@ -388,17 +415,33 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '800',
   },
-  logoutBtn: {
-    backgroundColor: '#ffffff',
+  guideBtn: {
+    backgroundColor: 'rgba(56, 189, 248, 0.12)',
     borderRadius: 18,
-    paddingVertical: 14,
+    paddingVertical: 13,
+    paddingHorizontal: 18,
     alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: '#fecdd3',
+    justifyContent: 'center',
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(56, 189, 248, 0.3)',
+  },
+  guideBtnText: {
+    color: '#38bdf8',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  logoutBtn: {
+    backgroundColor: 'rgba(239, 68, 68, 0.12)',
+    borderRadius: 18,
+    paddingVertical: 13,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.25)',
   },
   logoutBtnText: {
-    color: '#be123c',
-    fontSize: 14,
+    color: '#f87171',
+    fontSize: 13,
     fontWeight: '800',
   },
 });

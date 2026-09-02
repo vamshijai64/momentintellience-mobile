@@ -2,8 +2,6 @@ package com.anonymous.momentintelligencemobile
 
 import android.os.Build
 import android.os.Bundle
-import com.anonymous.momentintelligencemobile.R
-import com.anonymous.momentintelligencemobile.BuildConfig
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate

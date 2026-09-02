@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, View, Text, Platform } from 'react-native';
+import { BatSwingIcon } from './icons/AppIcons';
 
 interface JointMetric {
   name: string;
@@ -25,9 +26,9 @@ interface JointAngleMetricsCardProps {
 }
 
 const STATUS_THEME = {
-  CORRECT: { bg: 'rgba(16, 185, 129, 0.12)', text: '#34d399', border: '#10b981', label: 'IDEAL' },
-  MODERATE: { bg: 'rgba(245, 158, 11, 0.12)', text: '#fbbf24', border: '#f59e0b', label: 'ADJUST' },
-  INCORRECT: { bg: 'rgba(239, 68, 68, 0.12)', text: '#f87171', border: '#ef4444', label: 'OFF TARGET' },
+  CORRECT: { bg: '#dcfce7', text: '#15803d', border: '#10b981', label: 'IDEAL' },
+  MODERATE: { bg: '#fef3c7', text: '#b45309', border: '#f59e0b', label: 'ADJUST' },
+  INCORRECT: { bg: '#fee2e2', text: '#b91c1c', border: '#ef4444', label: 'OFF TARGET' },
 } as const;
 
 export const JointAngleMetricsCard: React.FC<JointAngleMetricsCardProps> = ({
@@ -39,7 +40,7 @@ export const JointAngleMetricsCard: React.FC<JointAngleMetricsCardProps> = ({
   observations = [],
   recommendations = [],
 }) => {
-  const scoreColor = overallScore >= 80 ? '#34d399' : overallScore >= 60 ? '#fbbf24' : '#f87171';
+  const scoreColor = overallScore >= 80 ? '#15803d' : overallScore >= 60 ? '#b45309' : '#b91c1c';
 
   const scoreItems = [
     { label: 'STABILITY', value: scores.stability },
@@ -67,7 +68,7 @@ export const JointAngleMetricsCard: React.FC<JointAngleMetricsCardProps> = ({
       <Text style={styles.sectionTitle}>MOVEMENT KINEMATIC SCORES</Text>
       <View style={styles.scoresGrid}>
         {scoreItems.map((item) => {
-          const color = item.value >= 80 ? '#34d399' : item.value >= 55 ? '#fbbf24' : '#f87171';
+          const color = item.value >= 80 ? '#15803d' : item.value >= 55 ? '#b45309' : '#b91c1c';
           return (
             <View key={item.label} style={styles.scoreCard}>
               <Text style={styles.scoreCardLabel}>{item.label}</Text>
@@ -95,7 +96,7 @@ export const JointAngleMetricsCard: React.FC<JointAngleMetricsCardProps> = ({
           recommendations.map((rec, i) => (
             <View key={i} style={styles.drillItem}>
               <View style={styles.drillBulletCircle}>
-                <Text style={styles.drillBullet}>🏏</Text>
+                <BatSwingIcon size={12} color="#0284c7" />
               </View>
               <Text style={styles.drillText}>{rec}</Text>
             </View>
@@ -104,7 +105,7 @@ export const JointAngleMetricsCard: React.FC<JointAngleMetricsCardProps> = ({
           <>
             <View style={styles.drillItem}>
               <View style={styles.drillBulletCircle}>
-                <Text style={styles.drillBullet}>🏏</Text>
+                <BatSwingIcon size={12} color="#0284c7" />
               </View>
               <Text style={styles.drillText}>
                 <Text style={styles.drillBold}>Tennis Ball Under Chin: </Text>
@@ -113,7 +114,7 @@ export const JointAngleMetricsCard: React.FC<JointAngleMetricsCardProps> = ({
             </View>
             <View style={styles.drillItem}>
               <View style={styles.drillBulletCircle}>
-                <Text style={styles.drillBullet}>🏏</Text>
+                <BatSwingIcon size={12} color="#0284c7" />
               </View>
               <Text style={styles.drillText}>
                 <Text style={styles.drillBold}>Mirror Shadow Drives: </Text>
@@ -155,22 +156,22 @@ export const JointAngleMetricsCard: React.FC<JointAngleMetricsCardProps> = ({
 
 const cardShadow = Platform.select({
   ios: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.25,
-    shadowRadius: 14,
+    shadowColor: '#64748b',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
   },
-  android: { elevation: 4 },
+  android: { elevation: 3 },
   default: {},
 });
 
 const styles = StyleSheet.create({
   cardContainer: {
-    backgroundColor: '#111a2e',
+    backgroundColor: '#ffffff',
     borderRadius: 22,
     padding: 20,
-    borderWidth: 1,
-    borderColor: '#1e293b',
+    borderWidth: 1.5,
+    borderColor: '#e2e8f0',
     marginVertical: 10,
     ...cardShadow,
   },
@@ -181,20 +182,20 @@ const styles = StyleSheet.create({
     marginBottom: 18,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderColor: 'rgba(148, 163, 184, 0.12)',
+    borderColor: '#e2e8f0',
   },
   headerLeft: {
     flex: 1,
     paddingRight: 12,
   },
   shotBadgeTitle: {
-    color: '#38bdf8',
+    color: '#0284c7',
     fontSize: 10.5,
     fontWeight: '700',
     letterSpacing: 1.2,
   },
   shotTypeTitle: {
-    color: '#ffffff',
+    color: '#0f172a',
     fontSize: 20,
     fontWeight: '800',
     marginTop: 4,
@@ -226,10 +227,12 @@ const styles = StyleSheet.create({
   metricRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(148, 163, 184, 0.06)',
+    backgroundColor: '#f8fafc',
     padding: 14,
     borderRadius: 14,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   metricAccent: {
     width: 4,
@@ -241,12 +244,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   metricName: {
-    color: '#ffffff',
+    color: '#0f172a',
     fontSize: 14.5,
     fontWeight: '700',
   },
   idealRangeText: {
-    color: '#94a3b8',
+    color: '#64748b',
     fontSize: 11.5,
     marginTop: 3,
   },
@@ -270,35 +273,36 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   flawBanner: {
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    backgroundColor: '#fee2e2',
     borderRadius: 14,
     padding: 14,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.25)',
+    borderColor: '#fca5a5',
   },
   flawTitle: {
-    color: '#f87171',
+    color: '#b91c1c',
     fontSize: 10.5,
     fontWeight: '800',
     letterSpacing: 0.8,
   },
   flawText: {
-    color: '#fca5a5',
+    color: '#991b1b',
     fontSize: 13,
     marginTop: 5,
     lineHeight: 18,
+    fontWeight: '500',
   },
   drillsContainer: {
-    backgroundColor: 'rgba(56, 189, 248, 0.06)',
+    backgroundColor: '#f0f9ff',
     borderRadius: 14,
     padding: 14,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.18)',
+    borderColor: '#bae6fd',
   },
   drillsHeader: {
-    color: '#38bdf8',
+    color: '#0284c7',
     fontSize: 10.5,
     fontWeight: '800',
     letterSpacing: 0.8,
@@ -313,7 +317,7 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: 'rgba(56, 189, 248, 0.12)',
+    backgroundColor: '#e0f2fe',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
@@ -323,13 +327,13 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
   drillText: {
-    color: '#cbd5e1',
+    color: '#334155',
     fontSize: 12.5,
     flex: 1,
     lineHeight: 18,
   },
   drillBold: {
-    color: '#ffffff',
+    color: '#0f172a',
     fontWeight: '700',
   },
   scoresGrid: {
@@ -340,14 +344,16 @@ const styles = StyleSheet.create({
   },
   scoreCard: {
     flex: 1,
-    backgroundColor: 'rgba(148, 163, 184, 0.06)',
+    backgroundColor: '#f8fafc',
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 6,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   scoreCardLabel: {
-    color: '#94a3b8',
+    color: '#64748b',
     fontSize: 8,
     fontWeight: '700',
     letterSpacing: 0.4,
@@ -361,7 +367,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 3,
     borderRadius: 1.5,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: '#e2e8f0',
     marginTop: 8,
     overflow: 'hidden',
   },

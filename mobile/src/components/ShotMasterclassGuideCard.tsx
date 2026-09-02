@@ -1,5 +1,15 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import {
+  TargetIcon,
+  ArmFlexIcon,
+  LegStrideIcon,
+  BatSwingIcon,
+  BookGuideIcon,
+  LightbulbCueIcon,
+  AlertWarnIcon,
+  GlassIconBadge,
+} from './icons/AppIcons';
 
 interface ShotGuideData {
   title: string;
@@ -108,7 +118,9 @@ export const ShotMasterclassGuideCard: React.FC<ShotMasterclassGuideCardProps> =
       {/* Header Banner */}
       <View style={styles.headerBar}>
         <View style={styles.titleRow}>
-          <Text style={styles.bookIcon}>📖</Text>
+          <GlassIconBadge bg="#e0f2fe" borderColor="#bae6fd" size={36}>
+            <BookGuideIcon size={20} color="#0284c7" />
+          </GlassIconBadge>
           <View>
             <Text style={styles.headerTitle}>COACHING BLUEPRINT & TECHNIQUE GUIDE</Text>
             <Text style={styles.headerSubtitle}>How to Play the Shot Correctly (CoachCricXI Style)</Text>
@@ -137,11 +149,14 @@ export const ShotMasterclassGuideCard: React.FC<ShotMasterclassGuideCardProps> =
 
       {/* 1. When to Play This Shot (Delivery Identification) */}
       <View style={styles.deliveryCard}>
-        <Text style={styles.cardHeaderSmall}>🎯 WHEN TO PLAY THIS SHOT:</Text>
+        <View style={styles.cardHeaderRow}>
+          <TargetIcon size={14} color="#0284c7" />
+          <Text style={styles.cardHeaderSmall}>WHEN TO PLAY THIS SHOT</Text>
+        </View>
         <Text style={styles.deliveryBody}>{guide.idealDelivery}</Text>
       </View>
 
-      {/* 2. Visual ❌ MISTAKE vs ✅ PRO FIX Side-by-Side */}
+      {/* 2. Visual ✕ MISTAKE vs ✓ PRO FIX Side-by-Side */}
       <View style={styles.contrastGrid}>
         {/* Common Mistake Card */}
         <View style={[styles.contrastCard, styles.mistakeCard]}>
@@ -163,11 +178,13 @@ export const ShotMasterclassGuideCard: React.FC<ShotMasterclassGuideCardProps> =
       </View>
 
       {/* 3. The 4 Anatomical Checkpoints (Head, Elbow, Legs, Swing) */}
-      <Text style={styles.sectionHeader}>📍 KEY ANATOMICAL CHECKPOINTS</Text>
+      <Text style={styles.sectionHeader}>KEY ANATOMICAL CHECKPOINTS</Text>
       <View style={styles.checkpointsGrid}>
         {/* Head */}
         <View style={styles.checkCard}>
-          <Text style={styles.checkIcon}>🎯</Text>
+          <GlassIconBadge bg="#e0f2fe" borderColor="#bae6fd" size={38}>
+            <TargetIcon size={20} color="#0284c7" />
+          </GlassIconBadge>
           <View style={styles.checkTextGroup}>
             <Text style={styles.checkName}>HEAD POSITION</Text>
             <Text style={styles.checkDesc}>{guide.checkpoints.head}</Text>
@@ -176,7 +193,9 @@ export const ShotMasterclassGuideCard: React.FC<ShotMasterclassGuideCardProps> =
 
         {/* Arms & Elbow */}
         <View style={styles.checkCard}>
-          <Text style={styles.checkIcon}>🦾</Text>
+          <GlassIconBadge bg="#f0fdf4" borderColor="#bbf7d0" size={38}>
+            <ArmFlexIcon size={20} color="#15803d" />
+          </GlassIconBadge>
           <View style={styles.checkTextGroup}>
             <Text style={styles.checkName}>LEAD ELBOW & ARMS</Text>
             <Text style={styles.checkDesc}>{guide.checkpoints.arms}</Text>
@@ -185,7 +204,9 @@ export const ShotMasterclassGuideCard: React.FC<ShotMasterclassGuideCardProps> =
 
         {/* Legs & Stride */}
         <View style={styles.checkCard}>
-          <Text style={styles.checkIcon}>🦵</Text>
+          <GlassIconBadge bg="#fef3c7" borderColor="#fde68a" size={38}>
+            <LegStrideIcon size={20} color="#b45309" />
+          </GlassIconBadge>
           <View style={styles.checkTextGroup}>
             <Text style={styles.checkName}>FEET & STRIDE BASE</Text>
             <Text style={styles.checkDesc}>{guide.checkpoints.legs}</Text>
@@ -194,7 +215,9 @@ export const ShotMasterclassGuideCard: React.FC<ShotMasterclassGuideCardProps> =
 
         {/* Bat Swing Plane */}
         <View style={styles.checkCard}>
-          <Text style={styles.checkIcon}>🏏</Text>
+          <GlassIconBadge bg="#f3e8ff" borderColor="#e9d5ff" size={38}>
+            <BatSwingIcon size={20} color="#7c3aed" />
+          </GlassIconBadge>
           <View style={styles.checkTextGroup}>
             <Text style={styles.checkName}>BAT SWING PLANE</Text>
             <Text style={styles.checkDesc}>{guide.checkpoints.swing}</Text>
@@ -204,13 +227,19 @@ export const ShotMasterclassGuideCard: React.FC<ShotMasterclassGuideCardProps> =
 
       {/* 4. Pro Mental Cue (The Secret Imagery) */}
       <View style={styles.mentalCueBox}>
-        <Text style={styles.mentalLabel}>💡 PRO COACHING SECRET CUE:</Text>
+        <View style={styles.cardHeaderRow}>
+          <LightbulbCueIcon size={16} color="#b45309" />
+          <Text style={styles.mentalLabel}>PRO COACHING SECRET CUE</Text>
+        </View>
         <Text style={styles.mentalText}>"{guide.mentalCue}"</Text>
       </View>
 
       {/* 5. Warning: When NOT to play */}
       <View style={styles.warningBox}>
-        <Text style={styles.warningLabel}>⚠️ WHEN NOT TO PLAY:</Text>
+        <View style={styles.cardHeaderRow}>
+          <AlertWarnIcon size={16} color="#b91c1c" />
+          <Text style={styles.warningLabel}>WHEN NOT TO PLAY</Text>
+        </View>
         <Text style={styles.warningText}>{guide.whenNotToPlay}</Text>
       </View>
     </View>
@@ -219,18 +248,21 @@ export const ShotMasterclassGuideCard: React.FC<ShotMasterclassGuideCardProps> =
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#0a1224',
+    backgroundColor: '#ffffff',
     borderRadius: 20,
     padding: 16,
     marginVertical: 12,
     borderWidth: 1.5,
-    borderColor: '#38bdf8',
+    borderColor: '#e2e8f0',
     ...Platform.select({
-      ios: { shadowColor: '#38bdf8', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 12 },
-      android: { elevation: 6 },
+      ios: { shadowColor: '#64748b', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12 },
+      android: { elevation: 3 },
     }),
   },
   headerBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 12,
   },
   titleRow: {
@@ -242,13 +274,13 @@ const styles = StyleSheet.create({
     fontSize: 20,
   },
   headerTitle: {
-    color: '#38bdf8',
-    fontSize: 11.5,
+    color: '#0284c7',
+    fontSize: 11,
     fontWeight: '900',
     letterSpacing: 0.6,
   },
   headerSubtitle: {
-    color: '#94a3b8',
+    color: '#64748b',
     fontSize: 10,
     fontWeight: '600',
     marginTop: 1,
@@ -258,43 +290,50 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   tabBtn: {
-    backgroundColor: 'rgba(15, 23, 42, 0.8)',
+    backgroundColor: '#f1f5f9',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
     marginRight: 6,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: '#e2e8f0',
   },
   tabBtnActive: {
-    backgroundColor: 'rgba(56, 189, 248, 0.2)',
-    borderColor: '#38bdf8',
+    backgroundColor: '#e0f2fe',
+    borderColor: '#0284c7',
   },
   tabBtnText: {
-    color: '#94a3b8',
+    color: '#64748b',
     fontSize: 10,
     fontWeight: '700',
   },
   tabBtnTextActive: {
-    color: '#38bdf8',
+    color: '#0284c7',
     fontWeight: '900',
   },
   deliveryCard: {
-    backgroundColor: 'rgba(15, 23, 42, 0.75)',
+    backgroundColor: '#f0f9ff',
     borderRadius: 12,
     padding: 10,
     borderLeftWidth: 3,
-    borderLeftColor: '#38bdf8',
+    borderLeftColor: '#0284c7',
+    borderWidth: 1,
+    borderColor: '#bae6fd',
     marginBottom: 12,
   },
+  cardHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
   cardHeaderSmall: {
-    color: '#38bdf8',
-    fontSize: 8.5,
+    color: '#0284c7',
+    fontSize: 9,
     fontWeight: '900',
-    marginBottom: 3,
   },
   deliveryBody: {
-    color: '#e2e8f0',
+    color: '#0369a1',
     fontSize: 11,
     lineHeight: 15,
     fontWeight: '600',
@@ -311,12 +350,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   mistakeCard: {
-    backgroundColor: 'rgba(239, 68, 68, 0.08)',
-    borderColor: 'rgba(239, 68, 68, 0.4)',
+    backgroundColor: '#fee2e2',
+    borderColor: '#fca5a5',
   },
   fixCard: {
-    backgroundColor: 'rgba(16, 185, 129, 0.08)',
-    borderColor: 'rgba(16, 185, 129, 0.4)',
+    backgroundColor: '#dcfce7',
+    borderColor: '#bbf7d0',
   },
   badgeRow: {
     flexDirection: 'row',
@@ -351,23 +390,23 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   mistakeTitle: {
-    color: '#f87171',
+    color: '#b91c1c',
     fontSize: 9,
     fontWeight: '900',
   },
   fixTitle: {
-    color: '#34d399',
+    color: '#15803d',
     fontSize: 9,
     fontWeight: '900',
   },
   contrastBody: {
-    color: '#cbd5e1',
+    color: '#334155',
     fontSize: 10,
     lineHeight: 14,
     fontWeight: '500',
   },
   sectionHeader: {
-    color: '#94a3b8',
+    color: '#64748b',
     fontSize: 9,
     fontWeight: '800',
     letterSpacing: 0.6,
@@ -379,13 +418,13 @@ const styles = StyleSheet.create({
   },
   checkCard: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+    backgroundColor: '#f8fafc',
     borderRadius: 10,
     padding: 9,
     alignItems: 'flex-start',
     gap: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
+    borderColor: '#e2e8f0',
   },
   checkIcon: {
     fontSize: 16,
@@ -395,52 +434,56 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   checkName: {
-    color: '#38bdf8',
+    color: '#0284c7',
     fontSize: 9,
     fontWeight: '800',
     marginBottom: 2,
   },
   checkDesc: {
-    color: '#cbd5e1',
+    color: '#334155',
     fontSize: 10.5,
     lineHeight: 14,
   },
   mentalCueBox: {
-    backgroundColor: 'rgba(245, 158, 11, 0.08)',
+    backgroundColor: '#fef3c7',
     borderRadius: 10,
     padding: 10,
     borderLeftWidth: 3,
     borderLeftColor: '#f59e0b',
+    borderWidth: 1,
+    borderColor: '#fde68a',
     marginBottom: 8,
   },
   mentalLabel: {
-    color: '#fbbf24',
+    color: '#b45309',
     fontSize: 8.5,
     fontWeight: '900',
     marginBottom: 3,
   },
   mentalText: {
-    color: '#fef3c7',
+    color: '#92400e',
     fontSize: 11,
     lineHeight: 15,
     fontStyle: 'italic',
     fontWeight: '600',
   },
   warningBox: {
-    backgroundColor: 'rgba(239, 68, 68, 0.06)',
+    backgroundColor: '#fee2e2',
     borderRadius: 10,
     padding: 10,
     borderLeftWidth: 3,
     borderLeftColor: '#ef4444',
+    borderWidth: 1,
+    borderColor: '#fca5a5',
   },
   warningLabel: {
-    color: '#f87171',
+    color: '#b91c1c',
     fontSize: 8.5,
     fontWeight: '900',
     marginBottom: 3,
   },
   warningText: {
-    color: '#fca5a5',
+    color: '#991b1b',
     fontSize: 10.5,
     lineHeight: 14,
   },

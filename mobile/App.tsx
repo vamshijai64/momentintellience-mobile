@@ -93,10 +93,10 @@ export default function App() {
   }
 
   return (
-    <SafeAreaView style={[styles.container, isLightShell && styles.containerLight]}>
+    <SafeAreaView style={styles.container}>
       <StatusBar
-        barStyle={isLightShell ? 'dark-content' : 'light-content'}
-        backgroundColor={isLightShell ? '#faf9f6' : '#000000'}
+        barStyle="dark-content"
+        backgroundColor="#f8fafc"
       />
       <View style={styles.mainContent}>
         {currentScreen === 'GUIDE' ? (
@@ -117,6 +117,7 @@ export default function App() {
             onVideoProcessed={handleVideoProcessed}
             onViewHistory={() => setCurrentScreen('HISTORY')}
             onViewProfile={() => setCurrentScreen('PROFILE')}
+            onViewGuide={() => setCurrentScreen('GUIDE')}
             onSignOut={() => setCurrentScreen('SIGN_OUT')}
           />
         ) : currentScreen === 'HISTORY' ? (
@@ -129,6 +130,7 @@ export default function App() {
           <ProfileScreen
             onBack={() => setCurrentScreen('RECORD')}
             onViewHistory={() => setCurrentScreen('HISTORY')}
+            onViewGuide={() => setCurrentScreen('GUIDE')}
             onSignOut={() => setCurrentScreen('SIGN_OUT')}
           />
         ) : currentScreen === 'SIGN_OUT' ? (
@@ -163,10 +165,7 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
-  },
-  containerLight: {
-    backgroundColor: '#faf9f6',
+    backgroundColor: '#f8fafc',
   },
   mainContent: {
     flex: 1,

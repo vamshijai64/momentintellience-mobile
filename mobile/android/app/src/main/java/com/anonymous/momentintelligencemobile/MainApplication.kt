@@ -2,7 +2,6 @@ package com.anonymous.momentintelligencemobile
 
 import android.app.Application
 import android.content.res.Configuration
-import com.anonymous.momentintelligencemobile.BuildConfig
 
 import com.facebook.react.PackageList
 import com.facebook.react.ReactApplication

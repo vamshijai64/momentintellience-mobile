@@ -20,9 +20,9 @@ interface AuthScreenProps {
   onSkipGuest: () => void;
 }
 
-const ACCENT = '#0d9488';
-const ACCENT_SOFT = '#ccfbf1';
-const ACCENT_DEEP = '#0f766e';
+const ACCENT = '#0284c7';
+const ACCENT_SOFT = '#e0f2fe';
+const ACCENT_DEEP = '#0369a1';
 
 /** FastAPI may return detail as string OR array/object — never show [object Object]. */
 const formatAuthError = (error: any, fallback: string): string => {

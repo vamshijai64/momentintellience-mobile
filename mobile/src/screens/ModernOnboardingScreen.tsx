@@ -10,6 +10,7 @@ import {
   Platform,
   StatusBar,
 } from 'react-native';
+import { GlassSparkleAIIcon, GlassTripodSetupIcon, GlassFramingReticleIcon } from '../components/GlassIcons';
 
 const { width, height } = Dimensions.get('window');
 
@@ -26,8 +27,6 @@ type Page = {
   accent: string;
   accentSoft: string;
   accentDeep: string;
-  blobA: string;
-  blobB: string;
   visual: 'hero' | 'setup' | 'frame';
   steps?: { num: string; title: string; text: string }[];
 };
@@ -36,44 +35,38 @@ const PAGES: Page[] = [
   {
     id: 1,
     brand: 'AI Cricket Coach',
-    eyebrow: 'BATTING ANALYSIS',
-    title: 'See your shot\nthe way coaches do',
+    eyebrow: 'BATTING BIOMECHANICS',
+    title: 'Transform your stroke\nwith AI Kinematics',
     subtitle:
-      'Film one delivery and get posture scores, joint angles, and clear drills — built for net sessions.',
-    accent: '#0d9488',
-    accentSoft: '#ccfbf1',
-    accentDeep: '#0f766e',
-    blobA: '#99f6e4',
-    blobB: '#fef3c7',
+      'Record one delivery and get instant joint angles, sweet-spot heatmaps, and pro-level masterclass blueprints.',
+    accent: '#0284c7',
+    accentSoft: '#e0f2fe',
+    accentDeep: '#0369a1',
     visual: 'hero',
   },
   {
     id: 2,
-    eyebrow: 'CAMERA SETUP',
-    title: 'Three steps to\na clean capture',
-    subtitle: 'Steady framing is half the analysis. Follow this once and every clip improves.',
-    accent: '#0d9488',
-    accentSoft: '#ccfbf1',
-    accentDeep: '#0f766e',
-    blobA: '#99f6e4',
-    blobB: '#e0f2fe',
+    eyebrow: 'CAMERA CALIBRATION',
+    title: 'Three steps to\nflawless AI tracking',
+    subtitle: 'Proper phone positioning unlocks 33-keypoint 3D tracking with sub-millimeter precision.',
+    accent: '#0284c7',
+    accentSoft: '#e0f2fe',
+    accentDeep: '#0369a1',
     visual: 'setup',
     steps: [
-      { num: '01', title: 'Pitch ready', text: 'Place three stumps on a clear crease line' },
-      { num: '02', title: 'Tripod lock', text: "Mount the phone behind the bowler's end" },
-      { num: '03', title: 'Waist height', text: "Keep the lens level with the batsman's hips" },
+      { num: '01', title: 'Crease Alignment', text: 'Align the camera directly along the batting crease line' },
+      { num: '02', title: 'Tripod Lock', text: "Position the phone level at the batsman's hip height" },
+      { num: '03', title: 'Clear Contrast', text: 'Ensure crisp daylight or clear net lighting around the player' },
     ],
   },
   {
     id: 3,
     eyebrow: 'FRAMING GUIDE',
-    title: 'Fill the frame\nwith the batsman',
-    subtitle: 'Zoom 2–4× so the player is large and centered. Tiny figures = weak AI tracking.',
-    accent: '#0d9488',
-    accentSoft: '#ccfbf1',
-    accentDeep: '#0f766e',
-    blobA: '#99f6e4',
-    blobB: '#fef3c7',
+    title: 'Fill the viewfinder\nhead-to-toe',
+    subtitle: 'Zoom 2–3× so the batsman fills the screen. Clear skeleton visibility ensures 99% accuracy.',
+    accent: '#0284c7',
+    accentSoft: '#e0f2fe',
+    accentDeep: '#0369a1',
     visual: 'frame',
   },
 ];
@@ -94,7 +87,7 @@ export const ModernOnboardingScreen: React.FC<ModernOnboardingScreenProps> = ({ 
     );
     const pulseLoop = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.06, duration: 1400, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1.05, duration: 1400, useNativeDriver: true }),
         Animated.timing(pulseAnim, { toValue: 1, duration: 1400, useNativeDriver: true }),
       ])
     );
@@ -108,7 +101,7 @@ export const ModernOnboardingScreen: React.FC<ModernOnboardingScreenProps> = ({ 
 
   const floatY = floatAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, -10],
+    outputRange: [0, -8],
   });
 
   const finishOnboarding = () => {
@@ -131,23 +124,23 @@ export const ModernOnboardingScreen: React.FC<ModernOnboardingScreenProps> = ({ 
 
   const renderHeroVisual = (page: Page) => (
     <Animated.View style={[styles.heroStage, { transform: [{ translateY: floatY }, { scale: pulseAnim }] }]}>
-      <View style={[styles.heroRingOuter, { borderColor: page.accentSoft }]}>
-        <View style={[styles.heroRingMid, { backgroundColor: page.accentSoft }]}>
-          <View style={[styles.heroCore, { backgroundColor: '#ffffff' }]}>
-            <Text style={styles.heroEmoji}>🏏</Text>
-            <View style={[styles.heroScoreChip, { backgroundColor: page.accent }]}>
-              <Text style={styles.heroScoreText}>92</Text>
+      <View style={styles.heroRingOuter}>
+        <View style={styles.heroRingMid}>
+          <View style={styles.heroCore}>
+            <GlassSparkleAIIcon size={36} active={true} />
+            <View style={styles.heroScoreChip}>
+              <Text style={styles.heroScoreText}>94%</Text>
             </View>
           </View>
         </View>
       </View>
-      <View style={[styles.floatingPill, styles.floatingPillLeft, { backgroundColor: '#ffffff' }]}>
+      <View style={[styles.floatingPill, styles.floatingPillLeft]}>
         <View style={[styles.floatingDot, { backgroundColor: '#10b981' }]} />
-        <Text style={styles.floatingPillText}>Ideal elbow</Text>
+        <Text style={styles.floatingPillText}>High Lead Elbow 144°</Text>
       </View>
-      <View style={[styles.floatingPill, styles.floatingPillRight, { backgroundColor: '#ffffff' }]}>
-        <View style={[styles.floatingDot, { backgroundColor: page.accent }]} />
-        <Text style={styles.floatingPillText}>Balance 88%</Text>
+      <View style={[styles.floatingPill, styles.floatingPillRight]}>
+        <View style={[styles.floatingDot, { backgroundColor: '#38bdf8' }]} />
+        <Text style={styles.floatingPillText}>Power Sync 94%</Text>
       </View>
     </Animated.View>
   );
@@ -161,12 +154,10 @@ export const ModernOnboardingScreen: React.FC<ModernOnboardingScreenProps> = ({ 
             styles.setupCard,
             {
               transform: [{ translateY: floatY }],
-              marginLeft: i === 1 ? 18 : 0,
-              marginRight: i === 2 ? 18 : 0,
             },
           ]}
         >
-          <View style={[styles.setupNumBadge, { backgroundColor: page.accent }]}>
+          <View style={styles.setupNumBadge}>
             <Text style={styles.setupNumText}>{step.num}</Text>
           </View>
           <View style={styles.setupCopy}>
@@ -194,23 +185,23 @@ export const ModernOnboardingScreen: React.FC<ModernOnboardingScreenProps> = ({ 
           </View>
         </View>
         <View style={styles.frameTagGood}>
-          <Text style={styles.frameTagGoodText}>✓ Perfect framing</Text>
+          <Text style={styles.frameTagGoodText}>✓ Ideal Framing (2-3x)</Text>
         </View>
-        <Text style={styles.frameCaption}>Zoomed · Full body</Text>
+        <Text style={styles.frameCaption}>Full Body · Clear Stumps</Text>
       </View>
 
       <View style={styles.frameCardBad}>
         <View style={[styles.framePreview, styles.framePreviewBad]}>
           <View style={styles.creaseLine} />
           <View style={styles.playerBlockTiny}>
-            <View style={[styles.playerHead, { width: 10, height: 10 }]} />
-            <View style={[styles.playerBody, { width: 14, height: 22 }]} />
+            <View style={[styles.playerHead, { width: 8, height: 8 }]} />
+            <View style={[styles.playerBody, { width: 12, height: 18 }]} />
           </View>
         </View>
         <View style={styles.frameTagBad}>
-          <Text style={styles.frameTagBadText}>✗ Too far</Text>
+          <Text style={styles.frameTagBadText}>✗ Too Distant</Text>
         </View>
-        <Text style={styles.frameCaption}>Hard for AI to track</Text>
+        <Text style={styles.frameCaption}>Low Skeletal Resolution</Text>
       </View>
     </View>
   );
@@ -230,17 +221,19 @@ export const ModernOnboardingScreen: React.FC<ModernOnboardingScreenProps> = ({ 
 
     return (
       <View key={page.id} style={styles.page}>
-        <View style={[styles.blobTL, { backgroundColor: page.blobA }]} />
-        <View style={[styles.blobTR, { backgroundColor: page.blobB }]} />
-        <View style={[styles.blobBR, { backgroundColor: page.accentSoft }]} />
+        <View style={styles.blobCyan} />
+        <View style={styles.blobBlue} />
 
         <Animated.View style={[styles.content, { transform: [{ scale }], opacity }]}>
           {page.brand ? (
-            <Text style={[styles.brandMark, { color: page.accentDeep }]}>{page.brand}</Text>
+            <View style={styles.brandRow}>
+              <GlassSparkleAIIcon size={18} active={true} />
+              <Text style={styles.brandMark}>{page.brand}</Text>
+            </View>
           ) : null}
 
-          <View style={[styles.eyebrowPill, { backgroundColor: page.accentSoft }]}>
-            <Text style={[styles.eyebrowText, { color: page.accentDeep }]}>{page.eyebrow}</Text>
+          <View style={styles.eyebrowPill}>
+            <Text style={styles.eyebrowText}>{page.eyebrow}</Text>
           </View>
 
           <Text style={styles.title}>{page.title}</Text>
@@ -327,231 +320,244 @@ export const ModernOnboardingScreen: React.FC<ModernOnboardingScreenProps> = ({ 
 
 const softShadow = Platform.select({
   ios: {
-    shadowColor: '#0f172a',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.08,
-    shadowRadius: 18,
+    shadowColor: '#64748b',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
   },
-  android: { elevation: 4 },
+  android: { elevation: 3 },
   default: {},
 });
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#faf9f6',
+    backgroundColor: '#f8fafc',
   },
   skipButton: {
     position: 'absolute',
     top: Platform.OS === 'ios' ? 56 : 32,
     right: 22,
     zIndex: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
     borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.85)',
+    backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: 'rgba(15, 23, 42, 0.06)',
+    borderColor: '#e2e8f0',
+    ...softShadow,
   },
   skipText: {
     color: '#64748b',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
   },
   page: {
     width,
     minHeight: height * 0.72,
-    paddingHorizontal: 28,
-    paddingTop: Platform.OS === 'ios' ? 90 : 70,
+    paddingHorizontal: 24,
+    paddingTop: Platform.OS === 'ios' ? 80 : 60,
     overflow: 'hidden',
   },
-  blobTL: {
+  blobCyan: {
     position: 'absolute',
     top: -60,
     left: -50,
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: 'rgba(224, 242, 254, 0.8)',
+  },
+  blobBlue: {
+    position: 'absolute',
+    top: 60,
+    right: -70,
     width: 200,
     height: 200,
     borderRadius: 100,
-    opacity: 0.55,
-  },
-  blobTR: {
-    position: 'absolute',
-    top: 40,
-    right: -70,
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-    opacity: 0.45,
-  },
-  blobBR: {
-    position: 'absolute',
-    bottom: 40,
-    right: -40,
-    width: 160,
-    height: 160,
-    borderRadius: 80,
-    opacity: 0.5,
+    backgroundColor: 'rgba(241, 245, 249, 0.9)',
   },
   content: {
     width: '100%',
     alignItems: 'flex-start',
   },
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 16,
+  },
   brandMark: {
-    fontSize: 15,
-    fontWeight: '800',
-    letterSpacing: 0.4,
-    marginBottom: 18,
-  },
-  eyebrowPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
-    marginBottom: 14,
-  },
-  eyebrowText: {
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1.5,
-  },
-  title: {
-    fontSize: 34,
+    fontSize: 14,
     fontWeight: '800',
     color: '#0f172a',
-    lineHeight: 40,
-    letterSpacing: -0.6,
+    letterSpacing: 0.5,
+  },
+  eyebrowPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: '#e0f2fe',
+    borderWidth: 1,
+    borderColor: '#bae6fd',
     marginBottom: 12,
   },
+  eyebrowText: {
+    color: '#0284c7',
+    fontSize: 9.5,
+    fontWeight: '800',
+    letterSpacing: 1.2,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '900',
+    color: '#0f172a',
+    lineHeight: 34,
+    letterSpacing: -0.4,
+    marginBottom: 10,
+  },
   subtitle: {
-    fontSize: 15.5,
+    fontSize: 14,
     color: '#64748b',
-    lineHeight: 23,
-    marginBottom: 28,
-    maxWidth: width * 0.86,
+    lineHeight: 21,
+    marginBottom: 24,
+    maxWidth: width * 0.88,
   },
   visualSlot: {
     width: '100%',
-    minHeight: 260,
+    minHeight: 250,
     justifyContent: 'center',
   },
 
   // Hero visual
   heroStage: {
     width: '100%',
-    height: 260,
+    height: 250,
     alignItems: 'center',
     justifyContent: 'center',
   },
   heroRingOuter: {
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    borderWidth: 8,
+    width: 190,
+    height: 190,
+    borderRadius: 95,
+    borderWidth: 2,
+    borderColor: '#e2e8f0',
     alignItems: 'center',
     justifyContent: 'center',
   },
   heroRingMid: {
-    width: 160,
-    height: 160,
-    borderRadius: 80,
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: '#f1f5f9',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
     alignItems: 'center',
     justifyContent: 'center',
   },
   heroCore: {
-    width: 118,
-    height: 118,
-    borderRadius: 36,
+    width: 110,
+    height: 110,
+    borderRadius: 32,
+    backgroundColor: '#ffffff',
+    borderWidth: 1.5,
+    borderColor: '#bae6fd',
     alignItems: 'center',
     justifyContent: 'center',
     ...softShadow,
   },
-  heroEmoji: {
-    fontSize: 46,
-  },
   heroScoreChip: {
     position: 'absolute',
-    bottom: -8,
-    right: -8,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    bottom: -6,
+    right: -6,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#0284c7',
+    borderWidth: 2,
+    borderColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 3,
-    borderColor: '#ffffff',
   },
   heroScoreText: {
     color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '800',
+    fontSize: 11.5,
+    fontWeight: '900',
   },
   floatingPill: {
     position: 'absolute',
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 7,
     borderRadius: 999,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
     gap: 6,
     ...softShadow,
   },
   floatingPillLeft: {
-    left: 4,
-    top: 36,
+    left: 2,
+    top: 32,
   },
   floatingPillRight: {
-    right: 4,
-    bottom: 42,
+    right: 2,
+    bottom: 36,
   },
   floatingDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   floatingPillText: {
     color: '#1e293b',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
   },
 
   // Setup visual
   setupStage: {
     width: '100%',
-    gap: 12,
+    gap: 10,
   },
   setupCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#ffffff',
-    borderRadius: 20,
-    padding: 16,
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1.5,
+    borderColor: '#e2e8f0',
     ...softShadow,
   },
   setupNumBadge: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: '#0284c7',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 14,
+    marginRight: 12,
   },
   setupNumText: {
     color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '800',
+    fontSize: 13,
+    fontWeight: '900',
   },
   setupCopy: {
     flex: 1,
   },
   setupTitle: {
     color: '#0f172a',
-    fontSize: 15.5,
+    fontSize: 14,
     fontWeight: '800',
     marginBottom: 2,
   },
   setupBody: {
     color: '#64748b',
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 11.5,
+    lineHeight: 16,
   },
 
   // Frame visual
@@ -563,28 +569,28 @@ const styles = StyleSheet.create({
   frameCardGood: {
     flex: 1.15,
     backgroundColor: '#ffffff',
-    borderRadius: 22,
-    padding: 12,
+    borderRadius: 18,
+    padding: 10,
     borderWidth: 1.5,
-    borderColor: '#a7f3d0',
+    borderColor: '#10b981',
     ...softShadow,
   },
   frameCardBad: {
     flex: 1,
     backgroundColor: '#ffffff',
-    borderRadius: 22,
-    padding: 12,
+    borderRadius: 18,
+    padding: 10,
     borderWidth: 1.5,
-    borderColor: '#fecdd3',
+    borderColor: '#fda4af',
     ...softShadow,
   },
   framePreview: {
-    height: 150,
-    borderRadius: 16,
-    backgroundColor: '#ecfdf5',
+    height: 140,
+    borderRadius: 14,
+    backgroundColor: '#f0fdf4',
     alignItems: 'center',
     justifyContent: 'flex-end',
-    paddingBottom: 18,
+    paddingBottom: 16,
     overflow: 'hidden',
   },
   framePreviewBad: {
@@ -592,11 +598,11 @@ const styles = StyleSheet.create({
   },
   creaseLine: {
     position: 'absolute',
-    bottom: 28,
+    bottom: 24,
     left: 10,
     right: 10,
     height: 2,
-    backgroundColor: 'rgba(15,23,42,0.12)',
+    backgroundColor: 'rgba(15, 23, 42, 0.15)',
     borderRadius: 1,
   },
   playerBlockLarge: {
@@ -605,115 +611,116 @@ const styles = StyleSheet.create({
   },
   playerBlockTiny: {
     alignItems: 'center',
-    marginBottom: 40,
-    opacity: 0.55,
+    marginBottom: 36,
+    opacity: 0.5,
   },
   playerHead: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: '#0f172a',
-    marginBottom: 4,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#0284c7',
+    marginBottom: 3,
   },
   playerBody: {
-    width: 28,
-    height: 46,
-    borderRadius: 10,
-    backgroundColor: '#334155',
+    width: 26,
+    height: 42,
+    borderRadius: 8,
+    backgroundColor: '#0369a1',
   },
   stumpRow: {
     flexDirection: 'row',
-    gap: 5,
+    gap: 4,
   },
   stumpBar: {
-    width: 5,
-    height: 28,
+    width: 4,
+    height: 24,
     borderRadius: 2,
     backgroundColor: '#f59e0b',
   },
   frameTagGood: {
     alignSelf: 'flex-start',
-    marginTop: 10,
-    backgroundColor: '#d1fae5',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    marginTop: 8,
+    backgroundColor: '#dcfce7',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: 999,
   },
   frameTagGoodText: {
-    color: '#047857',
-    fontSize: 11,
+    color: '#15803d',
+    fontSize: 10,
     fontWeight: '800',
   },
   frameTagBad: {
     alignSelf: 'flex-start',
-    marginTop: 10,
+    marginTop: 8,
     backgroundColor: '#ffe4e6',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: 999,
   },
   frameTagBadText: {
     color: '#be123c',
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '800',
   },
   frameCaption: {
-    marginTop: 6,
-    color: '#94a3b8',
-    fontSize: 11,
+    marginTop: 4,
+    color: '#64748b',
+    fontSize: 10,
     fontWeight: '600',
   },
 
   bottom: {
-    paddingHorizontal: 28,
+    paddingHorizontal: 24,
     paddingBottom: Platform.OS === 'ios' ? 42 : 28,
     paddingTop: 8,
-    backgroundColor: '#faf9f6',
+    backgroundColor: '#f8fafc',
   },
   dotsContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 18,
-    gap: 7,
+    marginBottom: 16,
+    gap: 6,
   },
   dot: {
-    height: 8,
-    borderRadius: 4,
+    height: 6,
+    borderRadius: 3,
   },
   nextButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 10,
-    paddingLeft: 22,
-    paddingRight: 10,
-    borderRadius: 22,
+    paddingVertical: 8,
+    paddingLeft: 20,
+    paddingRight: 8,
+    borderRadius: 20,
+    backgroundColor: '#0284c7',
     ...softShadow,
   },
   nextButtonText: {
     color: '#ffffff',
-    fontSize: 16.5,
+    fontSize: 15,
     fontWeight: '800',
   },
   arrowCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.22)',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   arrow: {
     color: '#ffffff',
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '800',
   },
   footerHint: {
     textAlign: 'center',
     color: '#94a3b8',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
-    marginTop: 14,
+    marginTop: 12,
   },
 });

@@ -1,11 +1,17 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Platform } from 'react-native';
+import {
+  StadiumCameraIcon,
+  ArmFlexIcon,
+  CompassArenaIcon,
+  CompassRadarIcon,
+  GlassIconBadge,
+} from './icons/AppIcons';
 
 type CameraAngle = 'BOWLER' | 'SQUARE_LEG' | 'GULLY' | 'BIRDS_EYE';
 
 interface CameraAngleConfig {
   name: string;
-  icon: string;
   perspectiveDesc: string;
   keyObservation: string;
   focusMetric: string;
@@ -14,32 +20,42 @@ interface CameraAngleConfig {
 const CAMERA_ANGLES: Record<CameraAngle, CameraAngleConfig> = {
   BOWLER: {
     name: "BOWLER'S END",
-    icon: '🎥',
     perspectiveDesc: 'Front-on view down the pitch corridor',
     keyObservation: 'Head stayed inside the line of off-stump; bat swung straight down the off-drive line.',
     focusMetric: 'Corridor Alignment: 98%',
   },
   SQUARE_LEG: {
     name: 'SQUARE LEG',
-    icon: '📐',
     perspectiveDesc: 'Side-on biomechanical depth view',
     keyObservation: 'Head locked directly over the front knee at impact; solid forward stride into the pitch.',
     focusMetric: 'Head-to-Knee Stack: LOCKED (0.08)',
   },
   GULLY: {
     name: 'SLIPS & GULLY',
-    icon: '🛡️',
     perspectiveDesc: 'Rear 45° edge & bat-face angle view',
     keyObservation: 'Full vertical bat face presented with zero outer edge angle risk; stroke stayed grounded.',
     focusMetric: 'Edge Risk: 0% (Clean Middle)',
   },
   BIRDS_EYE: {
     name: "BIRD'S EYE 360°",
-    icon: '🏟️',
     perspectiveDesc: 'Top-down stadium field & wagon wheel view',
     keyObservation: 'Ball accelerated through the Cover boundary at 47° off-side vector.',
-    focusMetric: 'Wagon Sector: COVER 🎯 (47°)',
+    focusMetric: 'Wagon Sector: COVER (47°)',
   },
+};
+
+const renderAngleIcon = (key: CameraAngle, isSelected: boolean) => {
+  const color = isSelected ? '#0284c7' : '#64748b';
+  switch (key) {
+    case 'BOWLER':
+      return <StadiumCameraIcon size={16} color={color} />;
+    case 'SQUARE_LEG':
+      return <ArmFlexIcon size={16} color={color} />;
+    case 'GULLY':
+      return <CompassArenaIcon size={16} color={color} />;
+    case 'BIRDS_EYE':
+      return <CompassRadarIcon size={16} color={color} />;
+  }
 };
 
 interface Stadium360AngleViewerProps {
@@ -61,7 +77,9 @@ export const Stadium360AngleViewer: React.FC<Stadium360AngleViewerProps> = ({
       {/* Header */}
       <View style={styles.headerRow}>
         <View style={styles.titleGroup}>
-          <Text style={styles.stadiumIcon}>🏟️</Text>
+          <GlassIconBadge bg="#e0f2fe" borderColor="#bae6fd" size={36}>
+            <CompassArenaIcon size={20} color="#0284c7" />
+          </GlassIconBadge>
           <View>
             <Text style={styles.title}>360° VIRTUAL STADIUM PERSPECTIVE</Text>
             <Text style={styles.subtitle}>Multi-Camera Angle Coaching Simulator</Text>
@@ -81,7 +99,9 @@ export const Stadium360AngleViewer: React.FC<Stadium360AngleViewerProps> = ({
               onPress={() => setSelectedAngle(angleKey)}
               activeOpacity={0.8}
             >
-              <Text style={styles.cameraBtnIcon}>{cfg.icon}</Text>
+              <View style={styles.cameraIconBox}>
+                {renderAngleIcon(angleKey, isSelected)}
+              </View>
               <Text style={[styles.cameraBtnText, isSelected && styles.cameraBtnTextActive]}>
                 {cfg.name}
               </Text>
@@ -94,7 +114,10 @@ export const Stadium360AngleViewer: React.FC<Stadium360AngleViewerProps> = ({
       <View style={styles.screenFrame}>
         {/* Top Perspective Header */}
         <View style={styles.screenHeader}>
-          <Text style={styles.screenCameraTag}>{current.icon} {current.name} CAMERA</Text>
+          <View style={styles.screenHeaderLeft}>
+            {renderAngleIcon(selectedAngle, true)}
+            <Text style={styles.screenCameraTag}>{current.name} CAMERA</Text>
+          </View>
           <Text style={styles.screenDescTag}>{current.perspectiveDesc}</Text>
         </View>
 
@@ -141,15 +164,15 @@ export const Stadium360AngleViewer: React.FC<Stadium360AngleViewerProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#0a1224',
+    backgroundColor: '#ffffff',
     borderRadius: 20,
     padding: 16,
     marginVertical: 12,
     borderWidth: 1.5,
-    borderColor: '#38bdf8',
+    borderColor: '#e2e8f0',
     ...Platform.select({
-      ios: { shadowColor: '#38bdf8', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 12 },
-      android: { elevation: 6 },
+      ios: { shadowColor: '#64748b', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12 },
+      android: { elevation: 3 },
     }),
   },
   headerRow: {
@@ -164,13 +187,13 @@ const styles = StyleSheet.create({
     fontSize: 20,
   },
   title: {
-    color: '#38bdf8',
+    color: '#0284c7',
     fontSize: 11,
     fontWeight: '900',
     letterSpacing: 0.6,
   },
   subtitle: {
-    color: '#94a3b8',
+    color: '#64748b',
     fontSize: 10,
     fontWeight: '600',
     marginTop: 1,
@@ -182,21 +205,22 @@ const styles = StyleSheet.create({
   },
   cameraBtn: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.85)',
+    backgroundColor: '#f1f5f9',
     paddingVertical: 7,
     paddingHorizontal: 4,
     borderRadius: 8,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: '#e2e8f0',
   },
   cameraBtnActive: {
-    backgroundColor: 'rgba(56, 189, 248, 0.25)',
-    borderColor: '#38bdf8',
+    backgroundColor: '#e0f2fe',
+    borderColor: '#0284c7',
   },
-  cameraBtnIcon: {
-    fontSize: 13,
-    marginBottom: 2,
+  cameraIconBox: {
+    marginBottom: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   cameraBtnText: {
     color: '#64748b',
@@ -205,15 +229,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   cameraBtnTextActive: {
-    color: '#38bdf8',
+    color: '#0284c7',
     fontWeight: '900',
   },
   screenFrame: {
-    backgroundColor: '#020617',
+    backgroundColor: '#f8fafc',
     borderRadius: 14,
     padding: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderWidth: 1.5,
+    borderColor: '#e2e8f0',
   },
   screenHeader: {
     flexDirection: 'row',
@@ -222,10 +246,15 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     paddingBottom: 6,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
+    borderBottomColor: '#e2e8f0',
+  },
+  screenHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   screenCameraTag: {
-    color: '#38bdf8',
+    color: '#0284c7',
     fontSize: 9.5,
     fontWeight: '900',
   },
@@ -236,10 +265,10 @@ const styles = StyleSheet.create({
   },
   pitchFieldBox: {
     height: 120,
-    backgroundColor: 'rgba(16, 185, 129, 0.08)',
+    backgroundColor: '#f0fdf4',
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.25)',
+    borderColor: '#bbf7d0',
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
@@ -248,10 +277,10 @@ const styles = StyleSheet.create({
   pitchStrip: {
     width: 60,
     height: '100%',
-    backgroundColor: 'rgba(217, 119, 6, 0.15)',
+    backgroundColor: '#fef3c7',
     borderLeftWidth: 1,
     borderRightWidth: 1,
-    borderColor: 'rgba(217, 119, 6, 0.4)',
+    borderColor: '#fde68a',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: 8,
@@ -259,12 +288,12 @@ const styles = StyleSheet.create({
   creaseLineTop: {
     width: 80,
     height: 1.5,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#64748b',
   },
   creaseLineBottom: {
     width: 80,
     height: 1.5,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#64748b',
   },
   stumpsTop: {
     flexDirection: 'row',
@@ -297,34 +326,36 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 12,
     top: 12,
-    backgroundColor: 'rgba(2, 6, 23, 0.8)',
+    backgroundColor: '#ffffff',
     paddingHorizontal: 7,
     paddingVertical: 3,
     borderRadius: 5,
     borderWidth: 1,
-    borderColor: '#10b981',
+    borderColor: '#bbf7d0',
   },
   corridorTag: {
-    color: '#34d399',
+    color: '#15803d',
     fontSize: 8,
     fontWeight: '900',
   },
   observationBox: {
     marginTop: 10,
-    backgroundColor: 'rgba(15, 23, 42, 0.75)',
+    backgroundColor: '#ffffff',
     borderRadius: 8,
     padding: 9,
     borderLeftWidth: 3,
     borderLeftColor: '#10b981',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   observationMetric: {
-    color: '#34d399',
+    color: '#15803d',
     fontSize: 9,
     fontWeight: '900',
     marginBottom: 2,
   },
   observationDesc: {
-    color: '#cbd5e1',
+    color: '#334155',
     fontSize: 10.5,
     lineHeight: 14,
     fontStyle: 'italic',

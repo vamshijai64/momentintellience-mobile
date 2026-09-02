@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Dimensions, Platform } from 'react-native';
 import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
+import { CrownGoldIcon } from './icons/AppIcons';
 
 interface DualVideoMasterclassViewProps {
   playerVideoUri?: string;
@@ -126,7 +127,10 @@ export const DualVideoMasterclassView: React.FC<DualVideoMasterclassViewProps> =
             {/* Pro Masterclass Gold Visual Overlay & Target HUD */}
             <View style={styles.proGoldenFilter}>
               <View style={styles.proTopBanner}>
-                <Text style={styles.proBannerText}>👑 PRO MASTERCLASS | 100% IDEAL FORM</Text>
+                <View style={styles.proBannerRow}>
+                  <CrownGoldIcon size={12} color="#fbbf24" />
+                  <Text style={styles.proBannerText}>PRO MASTERCLASS | 100% IDEAL FORM</Text>
+                </View>
               </View>
 
               {/* Floating Pro Keypoint Telemetry Callouts */}
@@ -182,12 +186,12 @@ export const DualVideoMasterclassView: React.FC<DualVideoMasterclassViewProps> =
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#0a1224',
+    backgroundColor: '#ffffff',
     borderRadius: 18,
     padding: 14,
     marginVertical: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.25)',
+    borderWidth: 1.5,
+    borderColor: '#e2e8f0',
   },
   headerRow: {
     flexDirection: 'row',
@@ -199,13 +203,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   eyebrow: {
-    color: '#38bdf8',
+    color: '#0284c7',
     fontSize: 9.5,
     fontWeight: '800',
     letterSpacing: 0.8,
   },
   title: {
-    color: '#ffffff',
+    color: '#0f172a',
     fontSize: 13,
     fontWeight: '800',
     marginTop: 2,
@@ -213,22 +217,22 @@ const styles = StyleSheet.create({
   livePill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    backgroundColor: '#dcfce7',
     paddingHorizontal: 8,
     paddingVertical: 3.5,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#10b981',
+    borderColor: '#bbf7d0',
     gap: 5,
   },
   liveDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#10b981',
+    backgroundColor: '#15803d',
   },
   liveText: {
-    color: '#34d399',
+    color: '#15803d',
     fontSize: 9,
     fontWeight: '900',
   },
@@ -239,24 +243,24 @@ const styles = StyleSheet.create({
   },
   tabBtn: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.75)',
+    backgroundColor: '#f1f5f9',
     paddingVertical: 7,
     borderRadius: 8,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: '#e2e8f0',
   },
   tabBtnActive: {
-    backgroundColor: 'rgba(56, 189, 248, 0.15)',
-    borderColor: '#38bdf8',
+    backgroundColor: '#e0f2fe',
+    borderColor: '#0284c7',
   },
   tabText: {
-    color: '#94a3b8',
+    color: '#64748b',
     fontSize: 10,
     fontWeight: '700',
   },
   tabTextActive: {
-    color: '#38bdf8',
+    color: '#0284c7',
     fontWeight: '900',
   },
   viewportContainer: {
@@ -264,15 +268,15 @@ const styles = StyleSheet.create({
     height: 230,
     borderRadius: 14,
     overflow: 'hidden',
-    backgroundColor: '#020617',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: '#0f172a',
+    borderWidth: 1.5,
+    borderColor: '#e2e8f0',
   },
   videoPanel: {
     flex: 1,
     height: '100%',
     position: 'relative',
-    backgroundColor: '#020617',
+    backgroundColor: '#0f172a',
   },
   splitLeft: {
     borderRightWidth: 1,
@@ -289,7 +293,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   placeholderText: {
-    color: '#64748b',
+    color: '#94a3b8',
     fontSize: 11,
     fontWeight: '600',
   },
@@ -299,7 +303,7 @@ const styles = StyleSheet.create({
     left: 8,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(2, 6, 23, 0.85)',
+    backgroundColor: 'rgba(15, 23, 42, 0.85)',
     paddingHorizontal: 6,
     paddingVertical: 3,
     borderRadius: 4,
@@ -311,7 +315,7 @@ const styles = StyleSheet.create({
     left: 8,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(2, 6, 23, 0.85)',
+    backgroundColor: 'rgba(15, 23, 42, 0.85)',
     paddingHorizontal: 6,
     paddingVertical: 3,
     borderRadius: 4,
@@ -339,12 +343,12 @@ const styles = StyleSheet.create({
     marginTop: 10,
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.08)',
+    borderTopColor: '#e2e8f0',
   },
   playBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#38bdf8',
+    backgroundColor: '#0284c7',
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: 8,
@@ -352,10 +356,10 @@ const styles = StyleSheet.create({
   },
   playBtnIcon: {
     fontSize: 12,
-    color: '#020617',
+    color: '#ffffff',
   },
   playBtnText: {
-    color: '#020617',
+    color: '#ffffff',
     fontSize: 11,
     fontWeight: '900',
   },
@@ -364,24 +368,24 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   speedBtn: {
-    backgroundColor: 'rgba(15, 23, 42, 0.8)',
+    backgroundColor: '#f1f5f9',
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: '#e2e8f0',
   },
   speedBtnActive: {
-    backgroundColor: 'rgba(56, 189, 248, 0.2)',
-    borderColor: '#38bdf8',
+    backgroundColor: '#e0f2fe',
+    borderColor: '#0284c7',
   },
   speedText: {
-    color: '#94a3b8',
+    color: '#64748b',
     fontSize: 10.5,
     fontWeight: '700',
   },
   speedTextActive: {
-    color: '#38bdf8',
+    color: '#0284c7',
     fontWeight: '900',
   },
   proGoldenFilter: {
@@ -397,12 +401,17 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(2, 6, 23, 0.88)',
+    backgroundColor: 'rgba(15, 23, 42, 0.88)',
     paddingVertical: 3,
     paddingHorizontal: 6,
     borderBottomWidth: 1,
     borderBottomColor: '#fbbf24',
     alignItems: 'center',
+  },
+  proBannerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
   },
   proBannerText: {
     color: '#fbbf24',
@@ -414,7 +423,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 55,
     right: 6,
-    backgroundColor: 'rgba(2, 6, 23, 0.85)',
+    backgroundColor: 'rgba(15, 23, 42, 0.85)',
     paddingHorizontal: 5,
     paddingVertical: 2,
     borderRadius: 4,
@@ -425,7 +434,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 35,
     right: 6,
-    backgroundColor: 'rgba(2, 6, 23, 0.85)',
+    backgroundColor: 'rgba(15, 23, 42, 0.85)',
     paddingHorizontal: 5,
     paddingVertical: 2,
     borderRadius: 4,
@@ -436,7 +445,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 30,
     left: 6,
-    backgroundColor: 'rgba(2, 6, 23, 0.85)',
+    backgroundColor: 'rgba(15, 23, 42, 0.85)',
     paddingHorizontal: 5,
     paddingVertical: 2,
     borderRadius: 4,

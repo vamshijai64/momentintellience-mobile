@@ -9,15 +9,15 @@ interface ShotVerdictCardProps {
 const RADIUS = 74;
 
 const VERDICT_THEME: Record<string, { bg: string; text: string; border: string; label: string; icon: string }> = {
-  GOOD_SHOT: { bg: 'rgba(16, 185, 129, 0.12)', text: '#34d399', border: '#10b981', label: 'GOOD SHOT', icon: '✓' },
-  AVERAGE_SHOT: { bg: 'rgba(245, 158, 11, 0.12)', text: '#fbbf24', border: '#f59e0b', label: 'AVERAGE SHOT', icon: '~' },
-  BAD_SHOT: { bg: 'rgba(239, 68, 68, 0.12)', text: '#f87171', border: '#ef4444', label: 'NEEDS WORK', icon: '!' },
+  GOOD_SHOT: { bg: '#dcfce7', text: '#15803d', border: '#10b981', label: 'GOOD SHOT', icon: '✓' },
+  AVERAGE_SHOT: { bg: '#fef3c7', text: '#b45309', border: '#f59e0b', label: 'AVERAGE SHOT', icon: '~' },
+  BAD_SHOT: { bg: '#fee2e2', text: '#b91c1c', border: '#ef4444', label: 'NEEDS WORK', icon: '!' },
 };
 
 const CONFIDENCE_THEME: Record<string, { text: string; label: string }> = {
-  HIGH: { text: '#34d399', label: 'High Confidence' },
-  MEDIUM: { text: '#fbbf24', label: 'Medium Confidence' },
-  LOW: { text: '#f87171', label: 'Low Confidence' },
+  HIGH: { text: '#15803d', label: 'High Confidence' },
+  MEDIUM: { text: '#b45309', label: 'Medium Confidence' },
+  LOW: { text: '#b91c1c', label: 'Low Confidence' },
 };
 
 export const ShotVerdictCard: React.FC<ShotVerdictCardProps> = ({ verdict }) => {
@@ -71,14 +71,14 @@ export const ShotVerdictCard: React.FC<ShotVerdictCardProps> = ({ verdict }) => 
           <Text style={styles.subScoreLabel}>TECHNIQUE</Text>
           <Text style={styles.subScoreValue}>{Math.round(verdict.technique_score)}%</Text>
           <View style={styles.subScoreTrack}>
-            <View style={[styles.subScoreFill, { width: `${Math.min(100, Math.max(0, verdict.technique_score))}%`, backgroundColor: '#38bdf8' }]} />
+            <View style={[styles.subScoreFill, { width: `${Math.min(100, Math.max(0, verdict.technique_score))}%`, backgroundColor: '#0284c7' }]} />
           </View>
         </View>
         <View style={styles.subScoreCard}>
           <Text style={styles.subScoreLabel}>EXECUTION</Text>
           <Text style={styles.subScoreValue}>{Math.round(verdict.execution_score)}%</Text>
           <View style={styles.subScoreTrack}>
-            <View style={[styles.subScoreFill, { width: `${Math.min(100, Math.max(0, verdict.execution_score))}%`, backgroundColor: '#a78bfa' }]} />
+            <View style={[styles.subScoreFill, { width: `${Math.min(100, Math.max(0, verdict.execution_score))}%`, backgroundColor: '#7c3aed' }]} />
           </View>
         </View>
       </View>
@@ -88,22 +88,22 @@ export const ShotVerdictCard: React.FC<ShotVerdictCardProps> = ({ verdict }) => 
 
 const cardShadow = Platform.select({
   ios: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.25,
-    shadowRadius: 14,
+    shadowColor: '#64748b',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
   },
-  android: { elevation: 4 },
+  android: { elevation: 3 },
   default: {},
 });
 
 const styles = StyleSheet.create({
   cardContainer: {
-    backgroundColor: '#111a2e',
+    backgroundColor: '#ffffff',
     borderRadius: 22,
     padding: 20,
-    borderWidth: 1,
-    borderColor: '#1e293b',
+    borderWidth: 1.5,
+    borderColor: '#e2e8f0',
     marginVertical: 10,
     ...cardShadow,
   },
@@ -169,7 +169,7 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(2, 6, 23, 0.55)',
+    backgroundColor: '#f8fafc',
   },
   scoreRingValue: {
     fontSize: 20,
@@ -183,15 +183,18 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   reasonBox: {
-    backgroundColor: 'rgba(148, 163, 184, 0.08)',
+    backgroundColor: '#f1f5f9',
     borderRadius: 12,
     padding: 12,
     marginTop: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   reasonText: {
-    color: '#cbd5e1',
+    color: '#334155',
     fontSize: 13,
     lineHeight: 19,
+    fontWeight: '500',
   },
   subScoreRow: {
     flexDirection: 'row',
@@ -200,19 +203,21 @@ const styles = StyleSheet.create({
   },
   subScoreCard: {
     flex: 1,
-    backgroundColor: 'rgba(148, 163, 184, 0.06)',
+    backgroundColor: '#f8fafc',
     borderRadius: 14,
     paddingVertical: 12,
     paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   subScoreLabel: {
-    color: '#94a3b8',
+    color: '#64748b',
     fontSize: 10,
     fontWeight: '700',
     letterSpacing: 0.6,
   },
   subScoreValue: {
-    color: '#ffffff',
+    color: '#0f172a',
     fontSize: 20,
     fontWeight: '800',
     marginTop: 4,
@@ -220,7 +225,7 @@ const styles = StyleSheet.create({
   subScoreTrack: {
     height: 4,
     borderRadius: 2,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: '#e2e8f0',
     marginTop: 8,
     overflow: 'hidden',
   },
@@ -230,7 +235,7 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: 'rgba(148, 163, 184, 0.12)',
+    backgroundColor: '#e2e8f0',
     marginTop: 18,
     marginBottom: 4,
   },

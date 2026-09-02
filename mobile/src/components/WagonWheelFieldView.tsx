@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
-import { StyleSheet, View, Text, Animated, Dimensions } from 'react-native';
+import { StyleSheet, View, Text, Animated } from 'react-native';
+import { CompassRadarIcon, ImpactPointIcon, GlassIconBadge } from './icons/AppIcons';
 
 interface WagonWheelFieldViewProps {
   shotDirectionDeg: number;
@@ -43,11 +44,16 @@ export const WagonWheelFieldView: React.FC<WagonWheelFieldViewProps> = ({
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>
-        <View>
-          <Text style={styles.title}>360° WAGON WHEEL RADAR</Text>
-          <Text style={styles.subtitle}>
-            Shot Trajectory: <Text style={styles.accentText}>{shotDirectionLabel}</Text> ({Math.round(shotDirectionDeg)}°)
-          </Text>
+        <View style={styles.headerLeft}>
+          <GlassIconBadge bg="#e0f2fe" borderColor="#bae6fd" size={36}>
+            <CompassRadarIcon size={20} color="#0284c7" />
+          </GlassIconBadge>
+          <View>
+            <Text style={styles.title}>360° WAGON WHEEL RADAR</Text>
+            <Text style={styles.subtitle}>
+              Shot Trajectory: <Text style={styles.accentText}>{shotDirectionLabel}</Text> ({Math.round(shotDirectionDeg)}°)
+            </Text>
+          </View>
         </View>
         <View style={styles.badgeBox}>
           <Text style={styles.badgeText}>{shotType}</Text>
@@ -72,7 +78,7 @@ export const WagonWheelFieldView: React.FC<WagonWheelFieldViewProps> = ({
           {/* Field Position Labels */}
           <Text style={[styles.fieldLabel, styles.posThirdMan]}>Third Man</Text>
           <Text style={[styles.fieldLabel, styles.posPoint]}>Point</Text>
-          <Text style={[styles.fieldLabel, styles.posCover, shotDirectionDeg <= 65 && styles.posCoverActive]}>Cover 🎯</Text>
+          <Text style={[styles.fieldLabel, styles.posCover, shotDirectionDeg <= 65 && styles.posCoverActive]}>Cover</Text>
           <Text style={[styles.fieldLabel, styles.posMidOff]}>Mid-Off</Text>
           <Text style={[styles.fieldLabel, styles.posLongOff]}>Straight</Text>
           <Text style={[styles.fieldLabel, styles.posMidOn]}>Mid-On</Text>
@@ -122,9 +128,12 @@ export const WagonWheelFieldView: React.FC<WagonWheelFieldViewProps> = ({
       </View>
 
       <View style={styles.footerNote}>
-        <Text style={styles.footerText}>
-          ⚡ <Text style={{ color: '#38bdf8', fontWeight: '700' }}>Off-Side Drive Sector:</Text> Power channeled between 35° & 60° through Cover.
-        </Text>
+        <View style={styles.footerRow}>
+          <ImpactPointIcon size={14} color="#0284c7" />
+          <Text style={styles.footerText}>
+            <Text style={{ color: '#0284c7', fontWeight: '700' }}> Off-Side Drive Sector:</Text> Power channeled between 35° & 60° through Cover.
+          </Text>
+        </View>
       </View>
     </View>
   );
@@ -132,12 +141,12 @@ export const WagonWheelFieldView: React.FC<WagonWheelFieldViewProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#0a1224',
+    backgroundColor: '#ffffff',
     borderRadius: 18,
     padding: 16,
     marginVertical: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.2)',
+    borderWidth: 1.5,
+    borderColor: '#e2e8f0',
   },
   headerRow: {
     flexDirection: 'row',
@@ -145,32 +154,37 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
   title: {
-    color: '#94a3b8',
+    color: '#0284c7',
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 0.8,
   },
   subtitle: {
-    color: '#e2e8f0',
+    color: '#0f172a',
     fontSize: 13,
     fontWeight: '700',
     marginTop: 2,
   },
   accentText: {
-    color: '#10b981',
+    color: '#15803d',
     fontWeight: '800',
   },
   badgeBox: {
-    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    backgroundColor: '#e0f2fe',
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.35)',
+    borderColor: '#bae6fd',
   },
   badgeText: {
-    color: '#34d399',
+    color: '#0284c7',
     fontSize: 11,
     fontWeight: '800',
   },
@@ -183,9 +197,9 @@ const styles = StyleSheet.create({
     width: 240,
     height: 240,
     borderRadius: 120,
-    backgroundColor: '#064e3b',
+    backgroundColor: '#166534',
     borderWidth: 2.5,
-    borderColor: '#34d399',
+    borderColor: '#86efac',
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
@@ -197,7 +211,7 @@ const styles = StyleSheet.create({
     borderRadius: 75,
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: 'rgba(255, 255, 255, 0.35)',
+    borderColor: 'rgba(255, 255, 255, 0.45)',
     position: 'absolute',
   },
   pitchRect: {
@@ -225,7 +239,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#38bdf8',
+    backgroundColor: '#0284c7',
     position: 'absolute',
     bottom: 8,
   },
@@ -233,19 +247,22 @@ const styles = StyleSheet.create({
     position: 'absolute',
     fontSize: 9,
     fontWeight: '700',
-    color: '#cbd5e1',
-    backgroundColor: 'rgba(15, 23, 42, 0.75)',
+    color: '#0f172a',
+    backgroundColor: '#ffffff',
     paddingHorizontal: 4,
     paddingVertical: 1,
     borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   posThirdMan: { top: 38, left: 16 },
   posPoint: { top: 88, left: 10 },
   posCover: { top: 150, left: 12 },
   posCoverActive: {
     backgroundColor: '#10b981',
-    color: '#022c22',
+    color: '#ffffff',
     fontWeight: '900',
+    borderColor: '#059669',
   },
   posMidOff: { bottom: 18, left: 55 },
   posLongOff: { bottom: 8, alignSelf: 'center' },
@@ -256,9 +273,9 @@ const styles = StyleSheet.create({
   shotBeam: {
     position: 'absolute',
     height: 3,
-    backgroundColor: '#10b981',
+    backgroundColor: '#4ade80',
     borderRadius: 2,
-    shadowColor: '#34d399',
+    shadowColor: '#86efac',
     shadowOpacity: 1,
     shadowRadius: 6,
     elevation: 4,
@@ -268,7 +285,7 @@ const styles = StyleSheet.create({
     width: 18,
     height: 18,
     borderRadius: 9,
-    backgroundColor: 'rgba(52, 211, 153, 0.4)',
+    backgroundColor: 'rgba(74, 222, 128, 0.5)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -276,17 +293,23 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#10b981',
+    backgroundColor: '#15803d',
   },
   footerNote: {
     marginTop: 6,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.08)',
+    borderTopColor: '#e2e8f0',
+  },
+  footerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   footerText: {
-    color: '#94a3b8',
+    color: '#64748b',
     fontSize: 11.5,
     lineHeight: 16,
+    flex: 1,
   },
 });

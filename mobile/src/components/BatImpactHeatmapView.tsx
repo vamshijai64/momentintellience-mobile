@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, View, Text, Platform } from 'react-native';
+import { FlameHeatIcon, ImpactPointIcon, GlassIconBadge } from './icons/AppIcons';
 
 interface BatImpactHeatmapViewProps {
   sweetSpotRatio?: number; // 0.0 - 1.0 (e.g. 0.92 for center)
@@ -21,7 +22,9 @@ export const BatImpactHeatmapView: React.FC<BatImpactHeatmapViewProps> = ({
       {/* Header */}
       <View style={styles.headerRow}>
         <View style={styles.titleGroup}>
-          <Text style={styles.flameIcon}>⚡</Text>
+          <GlassIconBadge bg="#e0f2fe" borderColor="#bae6fd" size={36}>
+            <FlameHeatIcon size={20} color="#0284c7" />
+          </GlassIconBadge>
           <View>
             <Text style={styles.title}>3D BAT FACE SWEET-SPOT HEATMAP</Text>
             <Text style={styles.subtitle}>Impact Dynamics & Ball Exit Telemetry</Text>
@@ -54,7 +57,7 @@ export const BatImpactHeatmapView: React.FC<BatImpactHeatmapViewProps> = ({
             <View style={styles.bladeZoneSweet}>
               <View style={styles.thermalRingOuter}>
                 <View style={styles.thermalRingCore}>
-                  <Text style={styles.impactCoreText}>🎯</Text>
+                  <ImpactPointIcon size={12} color="#ffffff" />
                 </View>
               </View>
               <Text style={styles.sweetLabel}>MIDDLE SWEET-SPOT</Text>
@@ -93,9 +96,12 @@ export const BatImpactHeatmapView: React.FC<BatImpactHeatmapViewProps> = ({
 
       {/* Bottom Summary Bar */}
       <View style={styles.bottomBar}>
-        <Text style={styles.bottomText}>
-          🎯 <Text style={styles.bottomBold}>Impact Quality:</Text> Ball struck the middle 3rd of the blade with full top-hand energy transmission.
-        </Text>
+        <View style={styles.bottomBarContent}>
+          <ImpactPointIcon size={14} color="#0284c7" />
+          <Text style={styles.bottomText}>
+            <Text style={styles.bottomBold}> Impact Quality:</Text> Ball struck the middle 3rd of the blade with full top-hand energy transmission.
+          </Text>
+        </View>
       </View>
     </View>
   );
@@ -103,15 +109,15 @@ export const BatImpactHeatmapView: React.FC<BatImpactHeatmapViewProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#0a1224',
+    backgroundColor: '#ffffff',
     borderRadius: 20,
     padding: 16,
     marginVertical: 12,
     borderWidth: 1.5,
-    borderColor: '#38bdf8',
+    borderColor: '#e2e8f0',
     ...Platform.select({
-      ios: { shadowColor: '#38bdf8', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 12 },
-      android: { elevation: 6 },
+      ios: { shadowColor: '#64748b', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12 },
+      android: { elevation: 3 },
     }),
   },
   headerRow: {
@@ -129,27 +135,27 @@ const styles = StyleSheet.create({
     fontSize: 20,
   },
   title: {
-    color: '#38bdf8',
+    color: '#0284c7',
     fontSize: 11,
     fontWeight: '900',
     letterSpacing: 0.6,
   },
   subtitle: {
-    color: '#94a3b8',
+    color: '#64748b',
     fontSize: 10,
     fontWeight: '600',
     marginTop: 1,
   },
   badgePill: {
-    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    backgroundColor: '#dcfce7',
     paddingHorizontal: 8,
     paddingVertical: 3.5,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#10b981',
+    borderColor: '#bbf7d0',
   },
   badgePillText: {
-    color: '#34d399',
+    color: '#15803d',
     fontSize: 9,
     fontWeight: '900',
   },
@@ -168,29 +174,29 @@ const styles = StyleSheet.create({
     backgroundColor: '#cbd5e1',
     borderRadius: 3,
     borderWidth: 1,
-    borderColor: '#64748b',
+    borderColor: '#94a3b8',
     justifyContent: 'space-evenly',
     alignItems: 'center',
   },
   gripLine: {
     width: 12,
     height: 1.5,
-    backgroundColor: '#475569',
+    backgroundColor: '#64748b',
   },
   batShoulders: {
     width: 42,
     height: 10,
-    backgroundColor: '#b45309',
+    backgroundColor: '#d97706',
     borderTopLeftRadius: 8,
     borderTopRightRadius: 8,
   },
   batBlade: {
     width: 52,
     height: 140,
-    backgroundColor: '#d97706',
+    backgroundColor: '#f59e0b',
     borderRadius: 6,
     borderWidth: 1.5,
-    borderColor: '#f59e0b',
+    borderColor: '#d97706',
     overflow: 'hidden',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -201,7 +207,7 @@ const styles = StyleSheet.create({
   },
   bladeZoneSweet: {
     alignItems: 'center',
-    backgroundColor: 'rgba(16, 185, 129, 0.25)',
+    backgroundColor: 'rgba(16, 185, 129, 0.35)',
     width: '100%',
     paddingVertical: 6,
     borderTopWidth: 1,
@@ -212,9 +218,9 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: 'rgba(56, 189, 248, 0.4)',
+    backgroundColor: 'rgba(2, 132, 199, 0.35)',
     borderWidth: 1.5,
-    borderColor: '#38bdf8',
+    borderColor: '#0284c7',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -222,7 +228,7 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: '#10b981',
+    backgroundColor: '#15803d',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -230,7 +236,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
   },
   sweetLabel: {
-    color: '#34d399',
+    color: '#15803d',
     fontSize: 6.5,
     fontWeight: '900',
     marginTop: 2,
@@ -239,7 +245,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   zoneText: {
-    color: 'rgba(255, 255, 255, 0.4)',
+    color: 'rgba(255, 255, 255, 0.75)',
     fontSize: 7,
     fontWeight: '800',
   },
@@ -248,11 +254,11 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   metricCard: {
-    backgroundColor: 'rgba(15, 23, 42, 0.75)',
+    backgroundColor: '#f8fafc',
     borderRadius: 10,
     padding: 9,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: '#e2e8f0',
   },
   metricLabel: {
     color: '#64748b',
@@ -261,19 +267,19 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
   },
   metricBigSpeed: {
-    color: '#38bdf8',
+    color: '#0284c7',
     fontSize: 15,
     fontWeight: '900',
     marginTop: 1,
   },
   metricBigPower: {
-    color: '#34d399',
+    color: '#15803d',
     fontSize: 15,
     fontWeight: '900',
     marginTop: 1,
   },
   metricBigDist: {
-    color: '#fbbf24',
+    color: '#b45309',
     fontSize: 15,
     fontWeight: '900',
     marginTop: 1,
@@ -281,29 +287,37 @@ const styles = StyleSheet.create({
   unitText: {
     fontSize: 9,
     fontWeight: '700',
-    color: '#94a3b8',
+    color: '#64748b',
   },
   metricSub: {
-    color: '#94a3b8',
+    color: '#64748b',
     fontSize: 8.5,
     fontWeight: '600',
     marginTop: 2,
   },
   bottomBar: {
     marginTop: 12,
-    backgroundColor: 'rgba(56, 189, 248, 0.08)',
+    backgroundColor: '#f0f9ff',
     borderRadius: 8,
     padding: 9,
     borderLeftWidth: 3,
-    borderLeftColor: '#38bdf8',
+    borderLeftColor: '#0284c7',
+    borderWidth: 1,
+    borderColor: '#bae6fd',
+  },
+  bottomBarContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   bottomText: {
-    color: '#cbd5e1',
+    color: '#334155',
     fontSize: 10.5,
     lineHeight: 14,
+    flex: 1,
   },
   bottomBold: {
-    color: '#38bdf8',
+    color: '#0284c7',
     fontWeight: '800',
   },
 });

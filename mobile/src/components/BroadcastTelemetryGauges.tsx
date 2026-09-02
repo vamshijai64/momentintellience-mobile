@@ -29,7 +29,7 @@ export const BroadcastTelemetryGauges: React.FC<BroadcastTelemetryGaugesProps> =
       value: `${Math.round(leadElbowAngle)}°`,
       target: '140° Ideal',
       percent: leadElbowAngle >= 130 && leadElbowAngle <= 150 ? 98 : 82,
-      color: '#34d399',
+      color: '#15803d',
       status: 'HIGH & EXTENDED',
     },
     {
@@ -37,7 +37,7 @@ export const BroadcastTelemetryGauges: React.FC<BroadcastTelemetryGaugesProps> =
       value: headOffsetRatio < 0.15 ? '0.08' : '0.24',
       target: '< 0.15 Plumb',
       percent: headOffsetRatio < 0.15 ? 100 : 75,
-      color: '#38bdf8',
+      color: '#0284c7',
       status: 'LOCKED OVER KNEE',
     },
     {
@@ -45,7 +45,7 @@ export const BroadcastTelemetryGauges: React.FC<BroadcastTelemetryGaugesProps> =
       value: `${Math.round(kneeFlexionAngle)}°`,
       target: '135° Ideal',
       percent: kneeFlexionAngle >= 115 && kneeFlexionAngle <= 150 ? 96 : 80,
-      color: '#fbbf24',
+      color: '#b45309',
       status: 'DEEP FOUNDATION',
     },
     {
@@ -53,7 +53,7 @@ export const BroadcastTelemetryGauges: React.FC<BroadcastTelemetryGaugesProps> =
       value: `${Math.round(overallScore)}%`,
       target: '100% Pro Sync',
       percent: Math.min(100, Math.round(overallScore)),
-      color: '#a78bfa',
+      color: '#7c3aed',
       status: 'ELITE DRIVE',
     },
   ];
@@ -70,12 +70,12 @@ export const BroadcastTelemetryGauges: React.FC<BroadcastTelemetryGaugesProps> =
         </View>
       </View>
 
-      {/* 4 Minimalist Neon Circular Metric Cards */}
+      {/* 4 Minimalist Circular Metric Cards */}
       <View style={styles.gridRow}>
         {rings.map((ring, idx) => (
           <View key={idx} style={styles.gaugeCard}>
             {/* Circular Gauge Ring */}
-            <View style={[styles.outerRing, { borderColor: `${ring.color}30` }]}>
+            <View style={[styles.outerRing, { borderColor: `${ring.color}25` }]}>
               <View style={[styles.innerRing, { borderColor: ring.color }]}>
                 <Text style={[styles.gaugeValue, { color: ring.color }]}>{ring.value}</Text>
                 <Text style={styles.gaugeMatch}>{ring.percent}%</Text>
@@ -95,12 +95,12 @@ export const BroadcastTelemetryGauges: React.FC<BroadcastTelemetryGaugesProps> =
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#0a1224',
+    backgroundColor: '#ffffff',
     borderRadius: 18,
     padding: 16,
     marginVertical: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.25)',
+    borderWidth: 1.5,
+    borderColor: '#e2e8f0',
   },
   headerRow: {
     flexDirection: 'row',
@@ -109,27 +109,27 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   eyebrow: {
-    color: '#38bdf8',
+    color: '#0284c7',
     fontSize: 9.5,
     fontWeight: '800',
     letterSpacing: 0.8,
   },
   title: {
-    color: '#ffffff',
+    color: '#0f172a',
     fontSize: 13,
     fontWeight: '800',
     marginTop: 2,
   },
   badgeBox: {
-    backgroundColor: 'rgba(56, 189, 248, 0.12)',
+    backgroundColor: '#e0f2fe',
     paddingHorizontal: 8,
     paddingVertical: 3.5,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.3)',
+    borderColor: '#bae6fd',
   },
   badgeText: {
-    color: '#38bdf8',
+    color: '#0284c7',
     fontSize: 9,
     fontWeight: '800',
   },
@@ -141,12 +141,12 @@ const styles = StyleSheet.create({
   gaugeCard: {
     flex: 1,
     minWidth: '45%',
-    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    backgroundColor: '#f8fafc',
     borderRadius: 14,
     padding: 12,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: '#e2e8f0',
   },
   outerRing: {
     width: 66,
@@ -164,20 +164,20 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(2, 6, 23, 0.6)',
+    backgroundColor: '#ffffff',
   },
   gaugeValue: {
     fontSize: 13.5,
     fontWeight: '900',
   },
   gaugeMatch: {
-    color: '#94a3b8',
+    color: '#64748b',
     fontSize: 8.5,
     fontWeight: '700',
     marginTop: 1,
   },
   gaugeLabel: {
-    color: '#e2e8f0',
+    color: '#0f172a',
     fontSize: 11,
     fontWeight: '800',
     marginBottom: 2,

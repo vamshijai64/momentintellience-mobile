@@ -19,9 +19,9 @@ interface ShotHistoryScreenProps {
 }
 
 const VERDICT_THEME: Record<string, { text: string; bg: string; label: string }> = {
-  GOOD_SHOT: { text: '#10b981', bg: '#064e3b', label: 'Good' },
-  AVERAGE_SHOT: { text: '#f59e0b', bg: '#78350f', label: 'Average' },
-  BAD_SHOT: { text: '#ef4444', bg: '#7f1d1d', label: 'Needs work' },
+  GOOD_SHOT: { text: '#15803d', bg: '#dcfce7', label: 'Good' },
+  AVERAGE_SHOT: { text: '#b45309', bg: '#fef3c7', label: 'Average' },
+  BAD_SHOT: { text: '#b91c1c', bg: '#fee2e2', label: 'Needs work' },
 };
 
 const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
@@ -327,12 +327,12 @@ export const ShotHistoryScreen: React.FC<ShotHistoryScreenProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#020617',
+    backgroundColor: '#f8fafc',
   },
   contentContainer: {
     padding: 16,
     paddingTop: 44,
-    paddingBottom: 40,
+    paddingBottom: 110,
   },
   headerBar: {
     flexDirection: 'row',
@@ -341,18 +341,20 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   backButton: {
-    backgroundColor: '#1e293b',
+    backgroundColor: '#ffffff',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: '#e2e8f0',
   },
   backButtonText: {
-    color: '#38bdf8',
+    color: '#0284c7',
     fontSize: 11,
     fontWeight: 'bold',
   },
   headerTitle: {
-    color: '#ffffff',
+    color: '#0f172a',
     fontSize: 14,
     fontWeight: 'bold',
     letterSpacing: 0.5,
@@ -364,10 +366,10 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   todayBanner: {
-    backgroundColor: '#064e3b',
+    backgroundColor: '#dcfce7',
     borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#10b981',
+    borderWidth: 1.5,
+    borderColor: '#bbf7d0',
     padding: 14,
     marginBottom: 14,
     flexDirection: 'row',
@@ -375,12 +377,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   todayBannerTitle: {
-    color: '#6ee7b7',
+    color: '#15803d',
     fontSize: 13,
     fontWeight: '800',
   },
   todayBannerText: {
-    color: '#d1fae5',
+    color: '#166534',
     fontSize: 12,
     fontWeight: '700',
   },
@@ -395,7 +397,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 2,
   },
   dayHeaderTitle: {
-    color: '#f8fafc',
+    color: '#0f172a',
     fontSize: 13,
     fontWeight: '800',
   },
@@ -405,15 +407,15 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   statsCard: {
-    backgroundColor: '#0f172a',
+    backgroundColor: '#ffffff',
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#1e293b',
+    borderWidth: 1.5,
+    borderColor: '#e2e8f0',
     padding: 16,
     marginBottom: 16,
   },
   statsEyebrow: {
-    color: '#94a3b8',
+    color: '#0284c7',
     fontSize: 9,
     fontWeight: 'bold',
     letterSpacing: 1,
@@ -438,7 +440,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   trendText: {
-    color: '#cbd5e1',
+    color: '#334155',
     fontSize: 11,
     textAlign: 'center',
     marginTop: 12,
@@ -448,7 +450,7 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
   },
   loadingText: {
-    color: '#94a3b8',
+    color: '#64748b',
     fontSize: 11,
     marginTop: 10,
   },
@@ -463,7 +465,7 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
   },
   emptyText: {
-    color: '#94a3b8',
+    color: '#0f172a',
     fontSize: 13,
     fontWeight: 'bold',
   },
@@ -478,10 +480,10 @@ const styles = StyleSheet.create({
   historyRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0f172a',
+    backgroundColor: '#ffffff',
     borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#1e293b',
+    borderWidth: 1.5,
+    borderColor: '#e2e8f0',
     padding: 10,
     marginBottom: 10,
     gap: 10,
@@ -491,7 +493,7 @@ const styles = StyleSheet.create({
     height: 64,
     borderRadius: 10,
     overflow: 'hidden',
-    backgroundColor: '#1e293b',
+    backgroundColor: '#f1f5f9',
   },
   thumbnailVideo: {
     width: '100%',
@@ -525,19 +527,21 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   historyRowTitle: {
-    color: '#ffffff',
+    color: '#0f172a',
     fontSize: 13,
     fontWeight: 'bold',
     flexShrink: 1,
   },
   multiBadge: {
-    backgroundColor: '#1e293b',
+    backgroundColor: '#f1f5f9',
     borderRadius: 6,
     paddingHorizontal: 6,
     paddingVertical: 2,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   multiBadgeText: {
-    color: '#94a3b8',
+    color: '#64748b',
     fontSize: 9,
     fontWeight: 'bold',
   },
@@ -574,7 +578,7 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   replayHint: {
-    color: '#38bdf8',
+    color: '#0284c7',
     fontSize: 11,
     fontWeight: 'bold',
   },

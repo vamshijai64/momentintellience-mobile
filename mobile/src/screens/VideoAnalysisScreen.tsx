@@ -15,6 +15,7 @@ import { PhaseTimelineScrubber } from '../components/PhaseTimelineScrubber';
 import { DualVideoMasterclassView } from '../components/DualVideoMasterclassView';
 import { BroadcastTelemetryGauges } from '../components/BroadcastTelemetryGauges';
 import { ShareableScorecardModal } from '../components/ShareableScorecardModal';
+import { GlassVerdictTabIcon, GlassMetricsTabIcon, GlassStadiumTabIcon, GlassMasterclassTabIcon } from '../components/GlassIcons';
 import { SessionSummaryView } from './SessionSummaryView';
 import { ShotComparisonView } from './ShotComparisonView';
 import { getAnalysisReport, getOverlayVideoUrl } from '../services/api';
@@ -212,238 +213,304 @@ export const VideoAnalysisScreen: React.FC<VideoAnalysisScreenProps> = ({
     );
   }
 
+  const [activeTab, setActiveTab] = useState<'verdict' | 'metrics' | 'stadium' | 'masterclass'>('verdict');
+
   // Detail view (single shot or selected shot from multi-shot session)
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      {/* Top Header Bar */}
-      <View style={styles.headerBar}>
-        <TouchableOpacity style={styles.backButton} onPress={shots.length > 1 ? handleBackToSummary : onBackToCamera}>
-          <Text style={styles.backButtonText}>
-            {shots.length > 1 ? '← SUMMARY' : '← RECORD AGAIN'}
-          </Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>
-          {shots.length > 1 ? `SHOT ${selectedShotIndex + 1} DETAIL` : 'POSTURE & KINEMATICS'}
-        </Text>
-      </View>
-
-      {/* Multi-Shot Detection Badge */}
-      {shots.length > 1 && (
-        <View style={styles.multiShotBadge}>
-          <Text style={styles.multiShotBadgeIcon}>✓</Text>
-          <Text style={styles.multiShotBadgeText}>
-            {shots.length} Shots Detected • Showing Shot {selectedShotIndex + 1}
-          </Text>
-        </View>
-      )}
-
-      {/* 🌟 3-Second High-Level Executive Coach Takeaway Card for Clients */}
-      <ExecutiveCoachSummaryCard
-        score={activeShotVerdict?.composite_score ?? (typeof overallScore === 'number' ? Math.round(overallScore) : 70)}
-        shotType={shotType}
-        shotDirectionLabel={activeShotVerdict?.shot_direction_label ?? 'COVER'}
-        shotDirectionDeg={activeShotVerdict?.shot_direction_deg ?? 50}
-        leadElbowAngle={leftElbowAngle}
-        kneeFlexionAngle={leftKneeAngle}
-        verdict={activeShotVerdict?.verdict ?? 'GOOD_SHOT'}
-        onOpenScorecard={() => setShowScorecardModal(true)}
-      />
-
-      {/* Video Overlay Player Window */}
-      <View style={styles.videoWindow}>
-        {/* Dynamic Skeleton Red/Green Guide Legend Overlay */}
-        <View style={styles.videoHudTop}>
-          <View style={styles.hudLegendItem}>
-            <View style={[styles.legendDot, { backgroundColor: '#10b981' }]} />
-            <Text style={styles.legendText}>GREEN: IDEAL TECHNIQUE</Text>
-          </View>
-          <View style={styles.hudLegendItem}>
-            <View style={[styles.legendDot, { backgroundColor: '#ef4444' }]} />
-            <Text style={styles.legendText}>RED: INCORRECT POSTURE</Text>
-          </View>
-        </View>
-
-        {/* Real Native Video Player Stream */}
-        <View style={styles.videoContentBox}>
-          {isLoading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#10b981" />
-              <Text style={styles.loadingText}>Fetching Backend MediaPipe Overlay...</Text>
-            </View>
-          ) : processedVideoUrl ? (
-            <Video
-              source={{ uri: processedVideoUrl }}
-              style={StyleSheet.absoluteFillObject}
-              resizeMode={ResizeMode.CONTAIN}
-              isLooping
-              shouldPlay
-              rate={playbackSpeed}
-            />
-          ) : (
-            <View style={styles.noVideoBox}>
-              <Text style={styles.noVideoText}>NO VIDEO STREAM AVAILABLE</Text>
-            </View>
-          )}
-
-          <Text style={styles.overlayVideoBadge}>
-            AI OVERLAY VIDEO ({playbackSpeed}X SLOW-MO)
-          </Text>
-
-          {/* Fullscreen Expand [ ] Button */}
-          <TouchableOpacity
-            style={styles.expandButton}
-            onPress={() => setIsFullscreen(true)}
+    <View style={styles.container}>
+      <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
+        {/* Top Header Bar */}
+        <View style={styles.headerBar}>
+          <TouchableOpacity 
+            style={styles.backButton} 
+            onPress={shots.length > 1 ? handleBackToSummary : onBackToCamera}
+            activeOpacity={0.7}
           >
-            <Text style={styles.expandButtonText}>⛶ EXPAND [ ]</Text>
+            <Text style={styles.backButtonText}>
+              {shots.length > 1 ? '← SUMMARY' : '← RECORD AGAIN'}
+            </Text>
+          </TouchableOpacity>
+          <View style={styles.headerTitleGroup}>
+            <Text style={styles.headerTitle}>
+              {shots.length > 1 ? `SHOT ${selectedShotIndex + 1} OF ${shots.length}` : 'AI SHOT AUDIT'}
+            </Text>
+            <Text style={styles.headerSubtitle}>{shotType}</Text>
+          </View>
+          <TouchableOpacity 
+            style={styles.exportHeaderBtn}
+            onPress={() => setShowScorecardModal(true)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.exportHeaderIcon}>📤</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Playback Controls Bar */}
-        <View style={styles.controlsRow}>
-          <Text style={styles.speedLabel}>SPEED:</Text>
-          {[0.25, 0.5, 1.0].map((speed) => (
-            <TouchableOpacity
-              key={speed}
-              style={[styles.speedBtn, playbackSpeed === speed && styles.speedBtnActive]}
-              onPress={() => setPlaybackSpeed(speed)}
-            >
-              <Text style={[styles.speedBtnText, playbackSpeed === speed && styles.speedBtnTextActive]}>
-                {speed}x
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
+        {/* Multi-Shot Detection Badge / Selector Strip */}
+        {shots.length > 1 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.shotSelectorStrip}
+            contentContainerStyle={styles.shotSelectorContent}
+          >
+            {shots.map((shot, idx) => {
+              const isActive = idx === selectedShotIndex;
+              const dotColor = shot.verdict === 'GOOD_SHOT' ? '#10b981' : shot.verdict === 'BAD_SHOT' ? '#ef4444' : '#f59e0b';
+              return (
+                <TouchableOpacity
+                  key={idx}
+                  style={[styles.shotPill, isActive && styles.shotPillActive]}
+                  onPress={() => setSelectedShotIndex(idx)}
+                >
+                  <View style={[styles.shotPillDot, { backgroundColor: dotColor }]} />
+                  <Text style={[styles.shotPillText, isActive && styles.shotPillTextActive]}>
+                    DELIVERY {idx + 1}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        )}
 
-      {/* Shot Selector Strip — shown for net-session videos with multiple deliveries */}
-      {shots.length > 1 && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.shotSelectorStrip}
-          contentContainerStyle={styles.shotSelectorContent}
-        >
-          {shots.map((shot, idx) => {
-            const isActive = idx === selectedShotIndex;
-            const dotColor = shot.verdict === 'GOOD_SHOT' ? '#10b981' : shot.verdict === 'BAD_SHOT' ? '#ef4444' : '#f59e0b';
+        {/* Video Overlay Player Window */}
+        <View style={styles.videoWindow}>
+          {/* Real Native Video Player Stream */}
+          <View style={styles.videoContentBox}>
+            {isLoading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#38bdf8" />
+                <Text style={styles.loadingTitle}>Analyzing Stroke Kinematics...</Text>
+                <Text style={styles.loadingSub}>Extracting 33 skeletal points & downswing trajectory</Text>
+              </View>
+            ) : processedVideoUrl ? (
+              <Video
+                source={{ uri: processedVideoUrl }}
+                style={StyleSheet.absoluteFillObject}
+                resizeMode={ResizeMode.CONTAIN}
+                isLooping
+                shouldPlay
+                rate={playbackSpeed}
+              />
+            ) : (
+              <View style={styles.noVideoBox}>
+                <Text style={styles.noVideoText}>NO VIDEO STREAM AVAILABLE</Text>
+              </View>
+            )}
+
+            {!isLoading && (
+              <View style={styles.inVideoTopRow}>
+                <View style={styles.overlayVideoBadge}>
+                  <View style={styles.livePulseDot} />
+                  <Text style={styles.overlayVideoBadgeText}>
+                    AI Overlay • {playbackSpeed}x Slow-Mo
+                  </Text>
+                </View>
+
+                <TouchableOpacity
+                  style={styles.expandButton}
+                  onPress={() => setIsFullscreen(true)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.expandButtonText}>⛶ Fullscreen</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+
+          {/* Playback Controls Bar */}
+          <View style={styles.controlsRow}>
+            <View style={styles.legendRow}>
+              <View style={styles.hudLegendItem}>
+                <View style={[styles.legendDot, { backgroundColor: '#10b981' }]} />
+                <Text style={styles.legendText}>Ideal</Text>
+              </View>
+              <View style={styles.hudLegendItem}>
+                <View style={[styles.legendDot, { backgroundColor: '#ef4444' }]} />
+                <Text style={styles.legendText}>Fix</Text>
+              </View>
+            </View>
+
+            <View style={styles.speedGroup}>
+              <Text style={styles.speedLabel}>SPEED:</Text>
+              {[0.25, 0.5, 1.0].map((speed) => (
+                <TouchableOpacity
+                  key={speed}
+                  style={[styles.speedBtn, playbackSpeed === speed && styles.speedBtnActive]}
+                  onPress={() => setPlaybackSpeed(speed)}
+                >
+                  <Text style={[styles.speedBtnText, playbackSpeed === speed && styles.speedBtnTextActive]}>
+                    {speed}x
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </View>
+
+        {/* 🌟 3-Second High-Level Executive Coach Takeaway Card for Clients */}
+        <ExecutiveCoachSummaryCard
+          score={activeShotVerdict?.composite_score ?? (typeof overallScore === 'number' ? Math.round(overallScore) : 70)}
+          shotType={shotType}
+          shotDirectionLabel={activeShotVerdict?.shot_direction_label ?? 'COVER'}
+          shotDirectionDeg={activeShotVerdict?.shot_direction_deg ?? 50}
+          leadElbowAngle={leftElbowAngle}
+          kneeFlexionAngle={leftKneeAngle}
+          verdict={activeShotVerdict?.verdict ?? 'GOOD_SHOT'}
+          onOpenScorecard={() => setShowScorecardModal(true)}
+        />
+
+        {/* 🎛️ Segmented Glass Navigation Pills */}
+        <View style={styles.tabContainer}>
+          {[
+            { id: 'verdict', label: 'Verdict', icon: (active: boolean) => <GlassVerdictTabIcon size={16} active={active} /> },
+            { id: 'metrics', label: '3D Form', icon: (active: boolean) => <GlassMetricsTabIcon size={16} active={active} /> },
+            { id: 'stadium', label: 'Stadium', icon: (active: boolean) => <GlassStadiumTabIcon size={16} active={active} /> },
+            { id: 'masterclass', label: 'Mastery', icon: (active: boolean) => <GlassMasterclassTabIcon size={16} active={active} /> },
+          ].map((tab) => {
+            const isActive = activeTab === tab.id;
             return (
               <TouchableOpacity
-                key={idx}
-                style={[styles.shotPill, isActive && styles.shotPillActive]}
-                onPress={() => setSelectedShotIndex(idx)}
+                key={tab.id}
+                style={[styles.tabButton, isActive && styles.tabButtonActive]}
+                onPress={() => setActiveTab(tab.id as any)}
+                activeOpacity={0.7}
               >
-                <View style={[styles.shotPillDot, { backgroundColor: dotColor }]} />
-                <Text style={[styles.shotPillText, isActive && styles.shotPillTextActive]}>
-                  SHOT {idx + 1}
+                <View style={styles.tabIconWrapper}>
+                  {tab.icon(isActive)}
+                </View>
+                <Text style={[styles.tabButtonText, isActive && styles.tabButtonTextActive]}>
+                  {tab.label}
                 </Text>
               </TouchableOpacity>
             );
           })}
-        </ScrollView>
-      )}
-
-      {/* AI Coach Shot Verdict: Good/Average/Bad Shot + Estimated Shot Direction */}
-      <ShotVerdictCard verdict={activeShotVerdict} />
-
-      {/* AI Coach Broadcast Audio Commentary Player */}
-      <AICoachVoicePlayer
-        score={activeShotVerdict?.composite_score ?? (typeof overallScore === 'number' ? Math.round(overallScore) : 70)}
-        techniqueScore={activeShotVerdict?.technique_score ?? 63}
-        executionScore={activeShotVerdict?.execution_score ?? 91}
-        shotType={shotType}
-        verdictLabel={activeShotVerdict?.verdict || 'GOOD SHOT'}
-        leadElbowAngle={leftElbowAngle}
-        kneeFlexionAngle={leftKneeAngle}
-        shotDirectionLabel={activeShotVerdict?.shot_direction_label ?? 'COVER'}
-        reason={activeShotVerdict?.reason}
-      />
-
-      {/* ⚡ 1. 3D Bat Face Sweet-Spot Thermal Heatmap & Exit Velocity */}
-      <BatImpactHeatmapView
-        sweetSpotRatio={0.94}
-        exitVelocityKmh={118}
-        shotDistanceMeters={74}
-        shotType={shotType}
-      />
-
-      {/* 🎚️ 2. Interactive Before vs After AI Correction Wipe Slider */}
-      <BeforeAfterCorrectionSlider
-        shotType={shotType}
-        currentElbowAngle={leftElbowAngle}
-        idealElbowAngle={144}
-      />
-
-      {/* 🏟️ 3. 360° Virtual Stadium Perspective & Multi-Camera Simulator */}
-      <Stadium360AngleViewer
-        shotType={shotType}
-        shotDirectionLabel={activeShotVerdict?.shot_direction_label ?? 'COVER'}
-        shotDirectionDeg={activeShotVerdict?.shot_direction_deg ?? 50}
-      />
-
-      {/* 📖 4. CoachCricXI / CricketGraph Visual Technique Blueprint Guide */}
-      <ShotMasterclassGuideCard
-        shotType={shotType}
-      />
-
-      {/* 1-Tap Export Performance Certificate Button */}
-      <TouchableOpacity 
-        style={styles.exportScorecardBtn} 
-        onPress={() => setShowScorecardModal(true)}
-        activeOpacity={0.8}
-      >
-        <Text style={styles.exportBtnIcon}>📥</Text>
-        <View style={styles.exportBtnTextGroup}>
-          <Text style={styles.exportBtnTitle}>EXPORT OFFICIAL PERFORMANCE SCORECARD</Text>
-          <Text style={styles.exportBtnSubtitle}>Share directly to WhatsApp, Coaches & Academy</Text>
         </View>
-        <Text style={styles.exportBtnArrow}>➔</Text>
-      </TouchableOpacity>
 
-      {/* 360° Interactive Stadium Wagon-Wheel Radar */}
-      <WagonWheelFieldView
-        shotDirectionDeg={activeShotVerdict?.shot_direction_deg ?? 50}
-        shotDirectionLabel={activeShotVerdict?.shot_direction_label ?? 'COVER'}
-        shotType={shotType}
-      />
+        {/* TAB CONTENT: 🎯 1. VERDICT & POSTURE AUDIT */}
+        {activeTab === 'verdict' && (
+          <View style={styles.tabContentSection}>
+            {/* AI Coach Shot Verdict: Good/Average/Bad Shot + Estimated Shot Direction */}
+            <ShotVerdictCard verdict={activeShotVerdict} />
 
-      {/* 4-Phase Stroke Scrubber & Masterclass Checklist */}
-      <PhaseTimelineScrubber
-        activePhase="IMPACT"
-      />
+            {/* AI Coach Broadcast Audio Commentary Player */}
+            <AICoachVoicePlayer
+              score={activeShotVerdict?.composite_score ?? (typeof overallScore === 'number' ? Math.round(overallScore) : 70)}
+              techniqueScore={activeShotVerdict?.technique_score ?? 63}
+              executionScore={activeShotVerdict?.execution_score ?? 91}
+              shotType={shotType}
+              verdictLabel={activeShotVerdict?.verdict || 'GOOD SHOT'}
+              leadElbowAngle={leftElbowAngle}
+              kneeFlexionAngle={leftKneeAngle}
+              shotDirectionLabel={activeShotVerdict?.shot_direction_label ?? 'COVER'}
+              reason={activeShotVerdict?.reason}
+            />
 
-      {/* Broadcast Dual-Video Masterclass Split-Screen Replay */}
-      <DualVideoMasterclassView
-        playerVideoUri={processedVideoUrl}
-        shotType={shotType}
-      />
+            {/* Hawk-Eye Biomechanical Telemetry Gauges */}
+            <BroadcastTelemetryGauges
+              leadElbowAngle={leftElbowAngle}
+              kneeFlexionAngle={leftKneeAngle}
+              overallScore={typeof overallScore === 'number' ? overallScore : 88}
+              headOffsetRatio={0.08}
+            />
 
-      {/* Hawk-Eye Biomechanical Telemetry Gauges */}
-      <BroadcastTelemetryGauges
-        leadElbowAngle={metricsData?.angles?.left_elbow ?? 138}
-        kneeFlexionAngle={metricsData?.angles?.left_knee ?? 132}
-        overallScore={typeof overallScore === 'number' ? overallScore : 88}
-        headOffsetRatio={0.08}
-      />
+            {/* Joint Measurement & Posture Analysis Metrics Card */}
+            <JointAngleMetricsCard
+              metrics={metricsData}
+              overallScore={overallScore}
+              shotType={shotType}
+              flawSummary={flawSummary}
+              scores={scores}
+              observations={observations}
+              recommendations={recommendations}
+            />
+          </View>
+        )}
 
-      {/* Pro-Player Elite Biomechanical Technique Audit */}
-      <ProComparisonRadarCard
-        overallScore={typeof overallScore === 'number' ? overallScore : 88}
-        shotType={shotType}
-        leadElbowAngle={metricsData?.angles?.left_elbow ?? 138}
-        kneeFlexionAngle={metricsData?.angles?.left_knee ?? 132}
-        isHeadStacked={true}
-      />
+        {/* TAB CONTENT: ⚡ 2. 3D PRO METRICS & FORM COMPARISON */}
+        {activeTab === 'metrics' && (
+          <View style={styles.tabContentSection}>
+            {/* ⚡ 1. 3D Bat Face Sweet-Spot Thermal Heatmap & Exit Velocity */}
+            <BatImpactHeatmapView
+              sweetSpotRatio={0.94}
+              exitVelocityKmh={118}
+              shotDistanceMeters={74}
+              shotType={shotType}
+            />
 
-      {/* Joint Measurement & Posture Analysis Metrics Card */}
-      <JointAngleMetricsCard
-        metrics={metricsData}
-        overallScore={overallScore}
-        shotType={shotType}
-        flawSummary={flawSummary}
-        scores={scores}
-        observations={observations}
-        recommendations={recommendations}
-      />
+            {/* 🎚️ 2. Interactive Before vs After AI Correction Wipe Slider */}
+            <BeforeAfterCorrectionSlider
+              shotType={shotType}
+              currentElbowAngle={leftElbowAngle}
+              idealElbowAngle={144}
+            />
+
+            {/* Pro-Player Elite Biomechanical Technique Audit */}
+            <ProComparisonRadarCard
+              overallScore={typeof overallScore === 'number' ? overallScore : 88}
+              shotType={shotType}
+              leadElbowAngle={leftElbowAngle}
+              kneeFlexionAngle={leftKneeAngle}
+              isHeadStacked={true}
+            />
+          </View>
+        )}
+
+        {/* TAB CONTENT: 🏟️ 3. 360° VIRTUAL STADIUM PERSPECTIVE */}
+        {activeTab === 'stadium' && (
+          <View style={styles.tabContentSection}>
+            {/* 🏟️ 360° Virtual Stadium Perspective & Multi-Camera Simulator */}
+            <Stadium360AngleViewer
+              shotType={shotType}
+              shotDirectionLabel={activeShotVerdict?.shot_direction_label ?? 'COVER'}
+              shotDirectionDeg={activeShotVerdict?.shot_direction_deg ?? 50}
+            />
+
+            {/* 360° Interactive Stadium Wagon-Wheel Radar */}
+            <WagonWheelFieldView
+              shotDirectionDeg={activeShotVerdict?.shot_direction_deg ?? 50}
+              shotDirectionLabel={activeShotVerdict?.shot_direction_label ?? 'COVER'}
+              shotType={shotType}
+            />
+          </View>
+        )}
+
+        {/* TAB CONTENT: 📖 4. COACHCRICXI MASTERCLASS & DRILLS */}
+        {activeTab === 'masterclass' && (
+          <View style={styles.tabContentSection}>
+            {/* 📖 CoachCricXI / CricketGraph Visual Technique Blueprint Guide */}
+            <ShotMasterclassGuideCard
+              shotType={shotType}
+            />
+
+            {/* 4-Phase Stroke Scrubber & Masterclass Checklist */}
+            <PhaseTimelineScrubber
+              activePhase="IMPACT"
+            />
+
+            {/* Broadcast Dual-Video Masterclass Split-Screen Replay */}
+            <DualVideoMasterclassView
+              playerVideoUri={processedVideoUrl}
+              shotType={shotType}
+            />
+          </View>
+        )}
+
+        {/* 1-Tap Export Performance Certificate Button */}
+        <TouchableOpacity 
+          style={styles.exportScorecardBtn} 
+          onPress={() => setShowScorecardModal(true)}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.exportBtnIcon}>📜</Text>
+          <View style={styles.exportBtnTextGroup}>
+            <Text style={styles.exportBtnTitle}>GENERATE OFFICIAL MATCH SCORECARD</Text>
+            <Text style={styles.exportBtnSubtitle}>Export high-res PDF certificate with biomechanical radar</Text>
+          </View>
+          <Text style={styles.exportBtnArrow}>➔</Text>
+        </TouchableOpacity>
+
+        <View style={{ height: 90 }} />
+      </ScrollView>
 
       {/* Fullscreen Video Overlay Modal */}
       <Modal visible={isFullscreen} animationType="fade" statusBarTranslucent>
@@ -496,39 +563,40 @@ export const VideoAnalysisScreen: React.FC<VideoAnalysisScreenProps> = ({
         shotType={shotType}
         shotDirectionLabel={activeShotVerdict?.shot_direction_label ?? 'COVER'}
         shotDirectionDeg={activeShotVerdict?.shot_direction_deg ?? 50}
-        leadElbowAngle={metricsData?.angles?.left_elbow ?? 138}
-        kneeFlexionAngle={metricsData?.angles?.left_knee ?? 132}
+        leadElbowAngle={leftElbowAngle}
+        kneeFlexionAngle={leftKneeAngle}
       />
-    </ScrollView>
+    </View>
   );
 };
 
 const cardShadow = Platform.select({
   ios: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.25,
-    shadowRadius: 14,
+    shadowColor: '#64748b',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
   },
-  android: { elevation: 4 },
+  android: { elevation: 3 },
   default: {},
 });
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#050b1a',
+    backgroundColor: '#f8fafc',
   },
   exportScorecardBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(56, 189, 248, 0.12)',
+    backgroundColor: '#e0f2fe',
     borderRadius: 14,
     padding: 14,
     marginVertical: 10,
     borderWidth: 1.5,
-    borderColor: '#38bdf8',
+    borderColor: '#bae6fd',
     gap: 12,
+    ...cardShadow,
   },
   exportBtnIcon: {
     fontSize: 22,
@@ -537,19 +605,19 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   exportBtnTitle: {
-    color: '#38bdf8',
+    color: '#0284c7',
     fontSize: 11.5,
     fontWeight: '900',
     letterSpacing: 0.5,
   },
   exportBtnSubtitle: {
-    color: '#94a3b8',
+    color: '#64748b',
     fontSize: 10,
     fontWeight: '600',
     marginTop: 2,
   },
   exportBtnArrow: {
-    color: '#38bdf8',
+    color: '#0284c7',
     fontSize: 16,
     fontWeight: '900',
   },
@@ -561,85 +629,129 @@ const styles = StyleSheet.create({
   multiShotBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    backgroundColor: '#dcfce7',
     marginTop: 4,
     marginBottom: 14,
     padding: 14,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.35)',
+    borderColor: '#bbf7d0',
     gap: 10,
   },
   multiShotBadgeIcon: {
     fontSize: 16,
-    color: '#34d399',
+    color: '#15803d',
   },
   multiShotBadgeText: {
     flex: 1,
     fontSize: 12.5,
     fontWeight: '700',
-    color: '#34d399',
+    color: '#15803d',
   },
   headerBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 18,
+    marginBottom: 16,
   },
   backButton: {
-    backgroundColor: 'rgba(148, 163, 184, 0.1)',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: 'rgba(148, 163, 184, 0.2)',
+    borderColor: '#e2e8f0',
+    ...cardShadow,
   },
   backButtonText: {
-    color: '#38bdf8',
-    fontSize: 11.5,
+    color: '#0284c7',
+    fontSize: 10.5,
     fontWeight: '700',
   },
+  headerTitleGroup: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: 8,
+  },
   headerTitle: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '800',
-    letterSpacing: 0.6,
+    color: '#0f172a',
+    fontSize: 13,
+    fontWeight: '900',
+    letterSpacing: 0.8,
+  },
+  headerSubtitle: {
+    color: '#0284c7',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    marginTop: 2,
+  },
+  exportHeaderBtn: {
+    backgroundColor: '#e0f2fe',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#bae6fd',
+  },
+  exportHeaderIcon: {
+    fontSize: 16,
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#f1f5f9',
+    padding: 4,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    marginVertical: 14,
+    gap: 4,
+  },
+  tabButton: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabButtonActive: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1.5,
+    borderColor: '#0284c7',
+    ...cardShadow,
+  },
+  tabIconWrapper: {
+    marginBottom: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabButtonText: {
+    color: '#64748b',
+    fontSize: 9,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  tabButtonTextActive: {
+    color: '#0284c7',
+    fontWeight: '900',
+  },
+  tabContentSection: {
+    gap: 12,
   },
   videoWindow: {
-    backgroundColor: '#111a2e',
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: '#1e293b',
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: '#e2e8f0',
     overflow: 'hidden',
     ...cardShadow,
   },
-  videoHudTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    backgroundColor: 'rgba(148, 163, 184, 0.08)',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderColor: 'rgba(148, 163, 184, 0.1)',
-  },
-  hudLegendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  legendDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    marginRight: 6,
-  },
-  legendText: {
-    color: '#cbd5e1',
-    fontSize: 9,
-    fontWeight: '700',
-    letterSpacing: 0.3,
-  },
   videoContentBox: {
-    height: 280,
-    backgroundColor: '#020617',
+    height: 260,
+    backgroundColor: '#0f172a',
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
@@ -647,12 +759,22 @@ const styles = StyleSheet.create({
   loadingContainer: {
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 24,
   },
-  loadingText: {
-    color: '#10b981',
-    fontSize: 11,
-    fontWeight: 'bold',
-    marginTop: 8,
+  loadingTitle: {
+    color: '#38bdf8',
+    fontSize: 12,
+    fontWeight: '800',
+    marginTop: 12,
+    letterSpacing: 0.5,
+    textAlign: 'center',
+  },
+  loadingSub: {
+    color: '#94a3b8',
+    fontSize: 10,
+    fontWeight: '600',
+    marginTop: 4,
+    textAlign: 'center',
   },
   noVideoBox: {
     alignItems: 'center',
@@ -660,28 +782,44 @@ const styles = StyleSheet.create({
   },
   noVideoText: {
     color: '#64748b',
-    fontSize: 12,
-    fontWeight: 'bold',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  inVideoTopRow: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    right: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   overlayVideoBadge: {
-    position: 'absolute',
-    top: 12,
-    left: 12,
-    backgroundColor: 'rgba(2, 6, 23, 0.75)',
-    color: '#38bdf8',
-    fontSize: 9,
-    fontWeight: '700',
-    paddingHorizontal: 9,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(2, 6, 23, 0.8)',
+    paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 999,
-    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(56, 189, 248, 0.25)',
+    gap: 6,
+  },
+  livePulseDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#10b981',
+  },
+  overlayVideoBadgeText: {
+    color: '#e2e8f0',
+    fontSize: 9.5,
+    fontWeight: '700',
   },
   expandButton: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    backgroundColor: 'rgba(2, 132, 199, 0.92)',
-    paddingHorizontal: 11,
+    backgroundColor: 'rgba(2, 132, 199, 0.85)',
+    paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 999,
   },
@@ -693,36 +831,62 @@ const styles = StyleSheet.create({
   controlsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(148, 163, 184, 0.04)',
-    padding: 12,
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(15, 23, 42, 0.95)',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     borderTopWidth: 1,
-    borderColor: 'rgba(148, 163, 184, 0.1)',
+    borderColor: 'rgba(255, 255, 255, 0.06)',
+  },
+  legendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  hudLegendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  legendDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: 5,
+  },
+  legendText: {
+    color: '#94a3b8',
+    fontSize: 9,
+    fontWeight: '700',
+  },
+  speedGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   speedLabel: {
-    color: '#94a3b8',
-    fontSize: 10,
-    fontWeight: '700',
-    marginRight: 8,
-    letterSpacing: 0.4,
+    color: '#64748b',
+    fontSize: 9,
+    fontWeight: '800',
+    marginRight: 6,
+    letterSpacing: 0.5,
   },
   speedBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     borderRadius: 999,
-    backgroundColor: 'rgba(148, 163, 184, 0.1)',
-    marginLeft: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    marginLeft: 4,
   },
   speedBtnActive: {
     backgroundColor: '#0284c7',
   },
   speedBtnText: {
     color: '#94a3b8',
-    fontSize: 10.5,
+    fontSize: 10,
     fontWeight: '700',
   },
   speedBtnTextActive: {
     color: '#ffffff',
+    fontWeight: '800',
   },
   fullscreenContainer: {
     flex: 1,

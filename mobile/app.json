@@ -18,11 +18,34 @@
     "android": {
       "package": "com.anonymous.momentintelligencemobile",
       "usesCleartextTraffic": true,
+      "permissions": [
+        "CAMERA",
+        "RECORD_AUDIO",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "READ_MEDIA_VIDEO",
+        "INTERNET"
+      ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/cricsense_logo_transparent.png",
         "backgroundColor": "#faf9f6"
       }
     },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow AI Cricket Coach to access camera for shot analysis.",
+          "microphonePermission": "Allow AI Cricket Coach to record audio."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow AI Cricket Coach to access your gallery videos."
+        }
+      ]
+    ],
     "extra": {
       "eas": {
         "projectId": "ec7a9349-3452-4d21-94d1-1125d9b91780"

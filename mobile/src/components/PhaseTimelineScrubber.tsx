@@ -1,5 +1,11 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
+import {
+  ScaleStanceIcon,
+  LightningLiftIcon,
+  ImpactPointIcon,
+  TrophyFinishIcon,
+} from './icons/AppIcons';
 
 export type StrokePhase = 'STANCE' | 'BACKLIFT' | 'IMPACT' | 'FINISH';
 
@@ -7,7 +13,6 @@ interface PhaseDetail {
   id: StrokePhase;
   label: string;
   subLabel: string;
-  icon: string;
   score: number;
   checks: { title: string; status: 'PERFECT' | 'GOOD' | 'CHECK'; value: string }[];
   coachingTip: string;
@@ -18,7 +23,6 @@ const PHASES: PhaseDetail[] = [
     id: 'STANCE',
     label: '1. STANCE',
     subLabel: 'Base & Setup',
-    icon: '⚖️',
     score: 95,
     checks: [
       { title: 'Shoulder Level', status: 'PERFECT', value: '0° Level' },
@@ -31,7 +35,6 @@ const PHASES: PhaseDetail[] = [
     id: 'BACKLIFT',
     label: '2. BACKLIFT',
     subLabel: 'Trigger & Lift',
-    icon: '⚡',
     score: 91,
     checks: [
       { title: 'Backlift Line', status: 'PERFECT', value: 'Toward 1st Slip' },
@@ -44,7 +47,6 @@ const PHASES: PhaseDetail[] = [
     id: 'IMPACT',
     label: '3. IMPACT',
     subLabel: 'Contact Zone',
-    icon: '🎯',
     score: 98,
     checks: [
       { title: 'Head-over-Knee Stack', status: 'PERFECT', value: '0.08 (Stacked)' },
@@ -57,7 +59,6 @@ const PHASES: PhaseDetail[] = [
     id: 'FINISH',
     label: '4. FINISH',
     subLabel: 'Follow-Through',
-    icon: '🏆',
     score: 94,
     checks: [
       { title: 'Elbow High Finish', status: 'PERFECT', value: 'Pointing to Cover' },
@@ -67,6 +68,20 @@ const PHASES: PhaseDetail[] = [
     coachingTip: 'Hold the pose for 2 seconds to reinforce muscle memory and balance.',
   },
 ];
+
+const renderPhaseIcon = (id: StrokePhase, isActive: boolean) => {
+  const iconColor = isActive ? '#15803d' : '#64748b';
+  switch (id) {
+    case 'STANCE':
+      return <ScaleStanceIcon size={18} color={iconColor} />;
+    case 'BACKLIFT':
+      return <LightningLiftIcon size={18} color={isActive ? '#b45309' : '#64748b'} />;
+    case 'IMPACT':
+      return <ImpactPointIcon size={18} color={iconColor} />;
+    case 'FINISH':
+      return <TrophyFinishIcon size={18} color={isActive ? '#d97706' : '#64748b'} />;
+  }
+};
 
 interface PhaseTimelineScrubberProps {
   activePhase?: StrokePhase;
@@ -104,7 +119,9 @@ export const PhaseTimelineScrubber: React.FC<PhaseTimelineScrubberProps> = ({
               onPress={() => handlePress(phase.id)}
               activeOpacity={0.8}
             >
-              <Text style={styles.phaseIcon}>{phase.icon}</Text>
+              <View style={styles.iconBox}>
+                {renderPhaseIcon(phase.id, isActive)}
+              </View>
               <Text style={[styles.phaseLabel, isActive && styles.phaseLabelActive]}>
                 {phase.id}
               </Text>
@@ -154,12 +171,12 @@ export const PhaseTimelineScrubber: React.FC<PhaseTimelineScrubberProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#0a1224',
+    backgroundColor: '#ffffff',
     borderRadius: 18,
     padding: 16,
     marginVertical: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.25)',
+    borderWidth: 1.5,
+    borderColor: '#e2e8f0',
   },
   headerRow: {
     flexDirection: 'row',
@@ -168,13 +185,13 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   title: {
-    color: '#38bdf8',
+    color: '#0284c7',
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 0.8,
   },
   badge: {
-    color: '#94a3b8',
+    color: '#64748b',
     fontSize: 9,
     fontWeight: '800',
     letterSpacing: 0.5,
@@ -186,33 +203,34 @@ const styles = StyleSheet.create({
   },
   phaseBtn: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.75)',
+    backgroundColor: '#f1f5f9',
     borderRadius: 12,
     paddingVertical: 10,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: '#e2e8f0',
   },
   phaseBtnActive: {
-    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    backgroundColor: '#dcfce7',
     borderColor: '#10b981',
   },
-  phaseIcon: {
-    fontSize: 14,
-    marginBottom: 2,
+  iconBox: {
+    marginBottom: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   phaseLabel: {
-    color: '#94a3b8',
+    color: '#64748b',
     fontSize: 9.5,
     fontWeight: '700',
     marginBottom: 4,
   },
   phaseLabelActive: {
-    color: '#34d399',
+    color: '#15803d',
     fontWeight: '900',
   },
   scoreBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: '#e2e8f0',
     paddingHorizontal: 5,
     paddingVertical: 1.5,
     borderRadius: 5,
@@ -226,15 +244,15 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   scoreTextActive: {
-    color: '#022c22',
+    color: '#ffffff',
     fontWeight: '900',
   },
   phaseCard: {
-    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    backgroundColor: '#f8fafc',
     borderRadius: 14,
     padding: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: '#e2e8f0',
   },
   phaseCardHeader: {
     flexDirection: 'row',
@@ -243,25 +261,25 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     paddingBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
+    borderBottomColor: '#e2e8f0',
   },
   phaseCardName: {
-    color: '#ffffff',
+    color: '#0f172a',
     fontSize: 12.5,
     fontWeight: '800',
     flex: 1,
     marginRight: 6,
   },
   formRatingBox: {
-    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    backgroundColor: '#dcfce7',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.4)',
+    borderColor: '#bbf7d0',
   },
   formRatingText: {
-    color: '#34d399',
+    color: '#15803d',
     fontSize: 9.5,
     fontWeight: '800',
   },
@@ -273,10 +291,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: 'rgba(2, 6, 23, 0.45)',
+    backgroundColor: '#ffffff',
     paddingHorizontal: 10,
     paddingVertical: 7,
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   checkLeft: {
     flexDirection: 'row',
@@ -286,41 +306,43 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   checkIcon: {
-    color: '#10b981',
+    color: '#15803d',
     fontWeight: '900',
     fontSize: 12,
   },
   checkTitle: {
-    color: '#e2e8f0',
+    color: '#0f172a',
     fontSize: 11.5,
     fontWeight: '600',
   },
   checkValueBox: {
-    backgroundColor: 'rgba(56, 189, 248, 0.12)',
+    backgroundColor: '#e0f2fe',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
   },
   checkValueText: {
-    color: '#38bdf8',
+    color: '#0284c7',
     fontSize: 10.5,
     fontWeight: '700',
   },
   tipBox: {
-    backgroundColor: 'rgba(56, 189, 248, 0.08)',
+    backgroundColor: '#f0f9ff',
     borderRadius: 8,
     padding: 9,
     borderLeftWidth: 3,
-    borderLeftColor: '#38bdf8',
+    borderLeftColor: '#0284c7',
+    borderWidth: 1,
+    borderColor: '#bae6fd',
   },
   tipLabel: {
-    color: '#38bdf8',
+    color: '#0284c7',
     fontSize: 9,
     fontWeight: '800',
     marginBottom: 2,
   },
   tipText: {
-    color: '#cbd5e1',
+    color: '#0369a1',
     fontSize: 11,
     lineHeight: 15,
   },

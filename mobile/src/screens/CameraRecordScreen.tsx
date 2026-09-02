@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, ActivityIndicator, Alert, Platform } from 'react-native';
 import { CameraView, useCameraPermissions, useMicrophonePermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { CameraStumpOverlay } from '../components/CameraStumpOverlay';
 import { PitchCreaseOverlay } from '../components/PitchCreaseOverlay';
 import { uploadVideoForAnalysis, detectBatsmanInFrame, pollForAnalysisResult, PollStatusUpdate } from '../services/api';
+import { GlassSparkleAIIcon } from '../components/GlassIcons';
 
 // expo-camera's Android session can only serve one capture mode at a time:
 // takePictureAsync() reliably fails while mode="video". Detection cycles are
@@ -17,6 +18,7 @@ interface CameraRecordScreenProps {
   onVideoProcessed?: (reportId: string, videoId: string, videoUri?: string) => void;
   onViewHistory?: () => void;
   onViewProfile?: () => void;
+  onViewGuide?: () => void;
   onSignOut?: () => void;
 }
 
@@ -24,6 +26,7 @@ export const CameraRecordScreen: React.FC<CameraRecordScreenProps> = ({
   onVideoProcessed,
   onViewHistory,
   onViewProfile,
+  onViewGuide,
   onSignOut,
 }) => {
   const [permission, requestPermission] = useCameraPermissions();
@@ -120,26 +123,51 @@ export const CameraRecordScreen: React.FC<CameraRecordScreenProps> = ({
         }
       }
 
-      // Start real camera recording
       if (cameraRef.current) {
         try {
           setIsRecording(true);
-          const video = await cameraRef.current.recordAsync({
-            maxDuration: 15,
-            mute: true,
+          setStageText('Recording in progress...');
+
+          const videoRecordPromise = cameraRef.current.recordAsync({
+            maxDuration: 60,
           });
 
+          const recordedVideo = await videoRecordPromise;
+
           setIsRecording(false);
-          if (video && video.uri) {
-            console.log('Recorded video URI:', video.uri);
-            await processRecordedVideo(video.uri);
-          } else {
-            Alert.alert('Recording Note', 'No video captured. Please try recording again.');
+          if (recordedVideo && recordedVideo.uri) {
+            setLastVideoUri(recordedVideo.uri);
+            // Prompt for stance orientation before uploading
+            Alert.alert(
+              'Select Batting Stance',
+              'For accurate MediaPipe skeletal analysis, please confirm stance:',
+              [
+                {
+                  text: 'Right-hand Batsman',
+                  onPress: () => {
+                    setBattingStance('RIGHT');
+                    processRecordedVideo(recordedVideo.uri, 'RIGHT');
+                  },
+                },
+                {
+                  text: 'Left-hand Batsman',
+                  onPress: () => {
+                    setBattingStance('LEFT');
+                    processRecordedVideo(recordedVideo.uri, 'LEFT');
+                  },
+                },
+                {
+                  text: 'Auto-Detect',
+                  style: 'cancel',
+                  onPress: () => processRecordedVideo(recordedVideo.uri, 'AUTO'),
+                },
+              ]
+            );
           }
-        } catch (err: any) {
-          console.error('Camera recording error', err);
+        } catch (err) {
+          console.error('Recording failed to complete', err);
           setIsRecording(false);
-          Alert.alert('Recording Error', err?.message || 'Camera failed to record video.');
+          Alert.alert('Recording Failed', 'An error occurred while recording the stroke.');
         }
       }
     }
@@ -163,7 +191,6 @@ export const CameraRecordScreen: React.FC<CameraRecordScreenProps> = ({
       setUploadProgress(2);
       setStageText('Uploading video...');
 
-      // 1. Multipart Upload (0-70% of the visible bar)
       const result = await uploadVideoForAnalysis(videoUri, 'CRICKET', (progress) => {
         setUploadProgress(Math.max(2, Math.min(70, progress * 0.7)));
       }, stanceToSend);
@@ -176,16 +203,10 @@ export const CameraRecordScreen: React.FC<CameraRecordScreenProps> = ({
       setUploadProgress(72);
       setStageText('Queued for analysis...');
 
-      // 2. Poll Backend until MediaPipe 3D Pose & YOLO detection completes,
-      // driving real stage text + a slowly-advancing progress bar instead of
-      // a static spinner for what can now be a multi-minute wait on
-      // multi-shot net-session videos.
       const report = await pollForAnalysisResult(videoId, 90, 2000, (update: PollStatusUpdate) => {
         const elapsedSec = Math.round(update.elapsedMs / 1000);
         const label = STAGE_LABELS[update.status] || 'Analyzing your shot...';
         setStageText(`${label} (${elapsedSec}s)`);
-        // Creep from 72% to 96% over the polling window so the bar never
-        // looks stuck even during long multi-shot processing.
         setUploadProgress(Math.min(96, 72 + update.attempt * 0.5));
       });
 
@@ -230,8 +251,8 @@ export const CameraRecordScreen: React.FC<CameraRecordScreenProps> = ({
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const selectedVideoUri = result.assets[0].uri;
-        // Gallery clips (other apps / WhatsApp) need batting hand — AUTO
-        // often flips long off to third man. Ask before analyzing.
+        setLastVideoUri(selectedVideoUri);
+
         Alert.alert(
           'Who is batting?',
           'Uploaded videos need the batting hand so shot direction (long off vs third man) is correct.',
@@ -271,7 +292,7 @@ export const CameraRecordScreen: React.FC<CameraRecordScreenProps> = ({
   if (!permission) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#10b981" />
+        <ActivityIndicator size="large" color="#38bdf8" />
         <Text style={styles.loadingText}>Initializing Camera...</Text>
       </View>
     );
@@ -279,20 +300,37 @@ export const CameraRecordScreen: React.FC<CameraRecordScreenProps> = ({
 
   if (!permission.granted) {
     return (
-      <View style={styles.centerContainer}>
-        <Text style={styles.permissionTitle}>CAMERA PERMISSION REQUIRED</Text>
-        <Text style={styles.permissionSub}>
-          AI Cricket Coach requires camera access to capture your cricket technique and posture.
-        </Text>
-        <TouchableOpacity
-          style={styles.grantButton}
-          onPress={async () => {
-            await requestPermission();
-            await requestMicPermission();
-          }}
-        >
-          <Text style={styles.grantButtonText}>GRANT CAMERA & MIC PERMISSIONS</Text>
-        </TouchableOpacity>
+      <View style={styles.permissionContainer}>
+        <View style={styles.permissionGlassCard}>
+          <View style={styles.permissionIconRing}>
+            <GlassSparkleAIIcon size={44} active={true} />
+          </View>
+          <Text style={styles.permissionTitle}>Camera & Mic Access</Text>
+          <Text style={styles.permissionSub}>
+            AI Cricket Coach requires live camera access to extract 33 skeletal keypoints and track batting downswing velocity in real time.
+          </Text>
+
+          <TouchableOpacity
+            style={styles.grantButton}
+            onPress={async () => {
+              await requestPermission();
+              await requestMicPermission();
+            }}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.grantButtonText}>Enable Camera & Microphone</Text>
+          </TouchableOpacity>
+
+          {onViewGuide && (
+            <TouchableOpacity
+              style={styles.guideButton}
+              onPress={onViewGuide}
+              activeOpacity={0.75}
+            >
+              <Text style={styles.guideButtonText}>📖 View Onboarding & Framing Guide</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
     );
   }
@@ -406,34 +444,86 @@ const styles = StyleSheet.create({
   },
   centerContainer: {
     flex: 1,
-    backgroundColor: '#020617',
+    backgroundColor: '#f8fafc',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
   },
+  permissionContainer: {
+    flex: 1,
+    backgroundColor: '#f8fafc',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  permissionGlassCard: {
+    width: '100%',
+    backgroundColor: '#ffffff',
+    borderRadius: 24,
+    padding: 24,
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#e2e8f0',
+    shadowColor: '#64748b',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 3,
+  },
+  permissionIconRing: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    backgroundColor: '#e0f2fe',
+    borderWidth: 1.5,
+    borderColor: '#bae6fd',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
   permissionTitle: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: 'bold',
-    letterSpacing: 1,
+    color: '#0f172a',
+    fontSize: 18,
+    fontWeight: '900',
+    letterSpacing: 0.5,
     marginBottom: 8,
+    textAlign: 'center',
   },
   permissionSub: {
-    color: '#94a3b8',
+    color: '#64748b',
     fontSize: 13,
+    lineHeight: 19,
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
   },
   grantButton: {
+    width: '100%',
     backgroundColor: '#0284c7',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 10,
+    paddingVertical: 14,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
   },
   grantButtonText: {
     color: '#ffffff',
-    fontSize: 12,
-    fontWeight: 'bold',
+    fontSize: 13.5,
+    fontWeight: '800',
+  },
+  guideButton: {
+    width: '100%',
+    backgroundColor: '#f1f5f9',
+    paddingVertical: 12,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  guideButtonText: {
+    color: '#0284c7',
+    fontSize: 12.5,
+    fontWeight: '700',
   },
   cameraViewport: {
     flex: 1,
@@ -538,7 +628,7 @@ const styles = StyleSheet.create({
   },
   controlsBar: {
     position: 'absolute',
-    bottom: 16,
+    bottom: Platform.OS === 'ios' ? 98 : 84,
     left: 0,
     right: 0,
     flexDirection: 'row',
@@ -581,42 +671,44 @@ const styles = StyleSheet.create({
   flipButton: {
     position: 'absolute',
     left: 24,
-    backgroundColor: 'rgba(15, 23, 42, 0.85)',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#334155',
+    backgroundColor: 'rgba(10, 18, 36, 0.8)',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 22,
+    borderWidth: 1.2,
+    borderColor: 'rgba(56, 189, 248, 0.3)',
   },
   flipButtonText: {
-    color: '#ffffff',
-    fontSize: 11,
-    fontWeight: 'bold',
+    color: '#38bdf8',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
   galleryButton: {
     position: 'absolute',
     right: 24,
-    backgroundColor: 'rgba(15, 23, 42, 0.85)',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#334155',
+    backgroundColor: 'rgba(10, 18, 36, 0.8)',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 22,
+    borderWidth: 1.2,
+    borderColor: 'rgba(56, 189, 248, 0.3)',
   },
   galleryButtonText: {
     color: '#38bdf8',
-    fontSize: 11,
-    fontWeight: 'bold',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
   recordButton: {
     width: 76,
     height: 76,
     borderRadius: 38,
-    borderWidth: 4,
+    borderWidth: 3.5,
     borderColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: 'rgba(239, 68, 68, 0.2)',
   },
   recordButtonActive: {
     borderColor: '#ef4444',

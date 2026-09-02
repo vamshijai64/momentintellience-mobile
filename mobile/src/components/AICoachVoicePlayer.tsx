@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Animated } from 'react-native';
+import { MicCommentaryIcon, GlassIconBadge } from './icons/AppIcons';
 
 interface AICoachVoicePlayerProps {
   score?: number;
@@ -124,7 +125,9 @@ export const AICoachVoicePlayer: React.FC<AICoachVoicePlayerProps> = ({
     <View style={styles.container}>
       <View style={styles.headerRow}>
         <View style={styles.titleRow}>
-          <Text style={styles.micIcon}>🎙️</Text>
+          <GlassIconBadge bg="#e0f2fe" borderColor="#bae6fd" size={36}>
+            <MicCommentaryIcon size={20} color="#0284c7" />
+          </GlassIconBadge>
           <View>
             <Text style={styles.title}>AI COACH VOICE COMMENTARY</Text>
             <Text style={styles.subtitle}>Broadcast TV Audio Breakdown</Text>
@@ -189,12 +192,12 @@ export const AICoachVoicePlayer: React.FC<AICoachVoicePlayerProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#0a1224',
+    backgroundColor: '#ffffff',
     borderRadius: 18,
     padding: 16,
     marginVertical: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.25)',
+    borderWidth: 1.5,
+    borderColor: '#e2e8f0',
   },
   headerRow: {
     flexDirection: 'row',
@@ -211,59 +214,59 @@ const styles = StyleSheet.create({
     fontSize: 20,
   },
   title: {
-    color: '#38bdf8',
+    color: '#0284c7',
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 0.8,
   },
   subtitle: {
-    color: '#94a3b8',
+    color: '#64748b',
     fontSize: 11,
     fontWeight: '600',
     marginTop: 1,
   },
   transcriptBtn: {
-    backgroundColor: 'rgba(56, 189, 248, 0.12)',
+    backgroundColor: '#e0f2fe',
     paddingHorizontal: 8,
     paddingVertical: 3.5,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.3)',
+    borderColor: '#bae6fd',
   },
   transcriptBtnText: {
-    color: '#38bdf8',
+    color: '#0284c7',
     fontSize: 9,
     fontWeight: '800',
   },
   playerBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(15, 23, 42, 0.75)',
+    backgroundColor: '#f8fafc',
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: '#e2e8f0',
     gap: 12,
   },
   playButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#10b981',
+    backgroundColor: '#0284c7',
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 8,
     gap: 6,
   },
   playButtonActive: {
-    backgroundColor: '#f59e0b',
+    backgroundColor: '#b45309',
   },
   playIcon: {
     fontSize: 13,
-    color: '#022c22',
+    color: '#ffffff',
   },
   playLabel: {
-    color: '#022c22',
+    color: '#ffffff',
     fontSize: 11,
     fontWeight: '900',
   },
@@ -281,32 +284,36 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   durationPill: {
-    backgroundColor: 'rgba(2, 6, 23, 0.6)',
+    backgroundColor: '#f1f5f9',
     paddingHorizontal: 7,
     paddingVertical: 4,
     borderRadius: 5,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   durationText: {
-    color: '#94a3b8',
+    color: '#64748b',
     fontSize: 9.5,
     fontWeight: '700',
   },
   transcriptBox: {
     marginTop: 10,
-    backgroundColor: 'rgba(2, 6, 23, 0.6)',
+    backgroundColor: '#f1f5f9',
     borderRadius: 10,
     padding: 10,
     borderLeftWidth: 3,
-    borderLeftColor: '#38bdf8',
+    borderLeftColor: '#0284c7',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   transcriptLabel: {
-    color: '#38bdf8',
+    color: '#0284c7',
     fontSize: 9,
     fontWeight: '800',
     marginBottom: 3,
   },
   transcriptBody: {
-    color: '#e2e8f0',
+    color: '#334155',
     fontSize: 11.5,
     lineHeight: 16,
     fontStyle: 'italic',
