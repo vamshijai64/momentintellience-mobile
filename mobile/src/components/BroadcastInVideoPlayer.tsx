@@ -54,11 +54,11 @@ export const BroadcastInVideoPlayer: React.FC<BroadcastInVideoPlayerProps> = ({
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(0.5);
   const [positionMillis, setPositionMillis] = useState<number>(0);
   const [durationMillis, setDurationMillis] = useState<number>(1);
-  const [showHudOverlays, setShowHudOverlays] = useState<boolean>(true);
-  const [showAngleTags, setShowAngleTags] = useState<boolean>(true);
+  const [showHudOverlays, setShowHudOverlays] = useState<boolean>(false);
+  const [showAngleTags, setShowAngleTags] = useState<boolean>(false);
   const [showGhostOverlay, setShowGhostOverlay] = useState<boolean>(false);
   const [ghostOpacity, setGhostOpacity] = useState<number>(0.65);
-  const [showTelemetryCard, setShowTelemetryCard] = useState<boolean>(true);
+  const [showTelemetryCard, setShowTelemetryCard] = useState<boolean>(false);
   const [activePhase, setActivePhase] = useState<StrokePhase>('IMPACT');
 
   // Pulse animation for live badge
