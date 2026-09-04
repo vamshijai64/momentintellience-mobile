@@ -125,6 +125,7 @@ export default function App() {
             accountKey={historyAccountKey}
             onBack={() => setCurrentScreen('RECORD')}
             onSelectVideo={handleSelectHistoryVideo}
+            onSignOut={() => setCurrentScreen('SIGN_OUT')}
           />
         ) : currentScreen === 'PROFILE' ? (
           <ProfileScreen

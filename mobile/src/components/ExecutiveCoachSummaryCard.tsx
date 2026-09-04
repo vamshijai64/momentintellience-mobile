@@ -15,7 +15,7 @@ interface ExecutiveCoachSummaryCardProps {
 
 export const ExecutiveCoachSummaryCard: React.FC<ExecutiveCoachSummaryCardProps> = ({
   score = 70,
-  shotType = 'COVER DRIVE',
+  shotType = 'CRICKET STROKE',
   shotDirectionLabel = 'COVER',
   shotDirectionDeg = 47,
   leadElbowAngle = 138,

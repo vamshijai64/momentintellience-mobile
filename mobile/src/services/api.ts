@@ -15,8 +15,16 @@ const ONBOARDING_DONE_KEY = '@ai_cricket_coach/onboarding_done';
 const GUEST_EMAIL_KEY = '@ai_cricket_coach/guest_email';
 const GUEST_PASSWORD_KEY = '@ai_cricket_coach/guest_password';
 
-export const isGuestEmail = (email?: string | null): boolean =>
-  Boolean(email && email.includes('@ai-cricket-coach.local'));
+export const isGuestEmail = (email?: string | null): boolean => {
+  if (!email) return false;
+  const lower = email.toLowerCase().trim();
+  return (
+    lower.startsWith('guest_') ||
+    lower.includes('@ai-cricket-coach.local') ||
+    lower.includes('@cricketcoach.com') ||
+    lower.includes('guest')
+  );
+};
 
 const clearGuestCredentials = async () => {
   await AsyncStorage.multiRemove([GUEST_EMAIL_KEY, GUEST_PASSWORD_KEY]);
@@ -190,7 +198,7 @@ export const ensureGuestSession = async (): Promise<void> => {
 
   const createFreshGuest = async () => {
     const suffix = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
-    const guestEmail = `guest_${suffix}@cricketcoach.com`;
+    const guestEmail = `guest_${suffix}@ai-cricket-coach.local`;
     const guestPassword = `Guest_${suffix}_Safe1`;
     await AsyncStorage.setItem(GUEST_EMAIL_KEY, guestEmail);
     await AsyncStorage.setItem(GUEST_PASSWORD_KEY, guestPassword);
@@ -315,8 +323,8 @@ export interface PollStatusUpdate {
 
 export const pollForAnalysisResult = async (
   videoId: string,
-  maxAttempts: number = 180,
-  intervalMs: number = 2000,
+  maxAttempts: number = 240,
+  intervalMs: number = 1500,
   onStatusUpdate?: (update: PollStatusUpdate) => void
 ): Promise<AnalysisReport> => {
   const startTime = Date.now();
@@ -350,7 +358,7 @@ export const pollForAnalysisResult = async (
     await new Promise((resolve) => setTimeout(resolve, intervalMs));
   }
 
-  throw new Error('Analysis is taking longer than expected. Please check back shortly from Shot History.');
+  throw new Error('Analysis is taking longer than expected on the server. Please check your Shot History tab in a few moments.');
 };
 
 export interface FrameDetectionResult {

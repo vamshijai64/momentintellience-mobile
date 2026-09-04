@@ -203,11 +203,11 @@ export const CameraRecordScreen: React.FC<CameraRecordScreenProps> = ({
       setUploadProgress(72);
       setStageText('Queued for analysis...');
 
-      const report = await pollForAnalysisResult(videoId, 90, 2000, (update: PollStatusUpdate) => {
+      const report = await pollForAnalysisResult(videoId, 240, 1500, (update: PollStatusUpdate) => {
         const elapsedSec = Math.round(update.elapsedMs / 1000);
-        const label = STAGE_LABELS[update.status] || 'Analyzing your shot...';
+        const label = STAGE_LABELS[update.status] || 'Analyzing your shot biomechanics...';
         setStageText(`${label} (${elapsedSec}s)`);
-        setUploadProgress(Math.min(96, 72 + update.attempt * 0.5));
+        setUploadProgress(Math.min(97, 72 + update.attempt * 0.4));
       });
 
       setUploadProgress(100);

@@ -15,6 +15,9 @@ import { PhaseTimelineScrubber } from '../components/PhaseTimelineScrubber';
 import { DualVideoMasterclassView } from '../components/DualVideoMasterclassView';
 import { BroadcastTelemetryGauges } from '../components/BroadcastTelemetryGauges';
 import { ShareableScorecardModal } from '../components/ShareableScorecardModal';
+import { BroadcastInVideoPlayer } from '../components/BroadcastInVideoPlayer';
+import { ShotTechniqueChecklistCard } from '../components/ShotTechniqueChecklistCard';
+import { ProGhostSideBySideCard } from '../components/ProGhostSideBySideCard';
 import { GlassVerdictTabIcon, GlassMetricsTabIcon, GlassStadiumTabIcon, GlassMasterclassTabIcon } from '../components/GlassIcons';
 import { SessionSummaryView } from './SessionSummaryView';
 import { ShotComparisonView } from './ShotComparisonView';
@@ -110,8 +113,8 @@ export const VideoAnalysisScreen: React.FC<VideoAnalysisScreenProps> = ({
   const activeShotVerdict = shots[selectedShotIndex] || shots[0] || report?.report_json?.shot_verdict;
 
   const shotClassification = report?.report_json?.shot_classification;
-  const shotType = shotClassification?.shot_type || (isLoading ? 'ANALYZING KINEMATICS...' : 'SHOT ANALYSIS COMPLETE');
-  const flawSummary = shotClassification?.shot_flaw || report?.report_json?.summary || 'High front elbow posture and solid stance balance.';
+  const shotType = activeShotVerdict?.shot_type || shotClassification?.shot_type || (isLoading ? 'ANALYZING KINEMATICS...' : 'SHOT ANALYSIS COMPLETE');
+  const flawSummary = activeShotVerdict?.reason || shotClassification?.shot_flaw || report?.report_json?.summary || 'High front elbow posture and solid stance balance.';
 
   // Get joint angles at IMPACT FRAME only (not averaged across all frames)
   const timeSeries = report?.report_json?.time_series_angles || [];
@@ -136,6 +139,16 @@ export const VideoAnalysisScreen: React.FC<VideoAnalysisScreenProps> = ({
       spineAngle = Math.round(impactFrameData.spine_inclination || spineAngle);
     }
   }
+
+  const totalFrames = timeSeries.length || 100;
+  const calculatedImpactRatio = totalFrames > 0 
+    ? Math.min(0.95, Math.max(0.05, impactFrame / totalFrames)) 
+    : 0.62;
+
+  const kineticEfficiency = shotClassification?.kinetic_efficiency ?? activeShotVerdict?.technique_score ?? 88;
+  const executionScore = activeShotVerdict?.execution_score ?? (typeof overallScore === 'number' ? Math.round(overallScore) : 85);
+  const dynamicExitVelocity = Math.round(75 + (executionScore / 100) * 45);
+  const dynamicSweetSpot = Math.min(0.98, Math.max(0.65, (kineticEfficiency / 100)));
 
   const metricsData = [
     {
@@ -272,80 +285,23 @@ export const VideoAnalysisScreen: React.FC<VideoAnalysisScreenProps> = ({
           </ScrollView>
         )}
 
-        {/* Video Overlay Player Window */}
-        <View style={styles.videoWindow}>
-          {/* Real Native Video Player Stream */}
-          <View style={styles.videoContentBox}>
-            {isLoading ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#38bdf8" />
-                <Text style={styles.loadingTitle}>Analyzing Stroke Kinematics...</Text>
-                <Text style={styles.loadingSub}>Extracting 33 skeletal points & downswing trajectory</Text>
-              </View>
-            ) : processedVideoUrl ? (
-              <Video
-                source={{ uri: processedVideoUrl }}
-                style={StyleSheet.absoluteFillObject}
-                resizeMode={ResizeMode.CONTAIN}
-                isLooping
-                shouldPlay
-                rate={playbackSpeed}
-              />
-            ) : (
-              <View style={styles.noVideoBox}>
-                <Text style={styles.noVideoText}>NO VIDEO STREAM AVAILABLE</Text>
-              </View>
-            )}
-
-            {!isLoading && (
-              <View style={styles.inVideoTopRow}>
-                <View style={styles.overlayVideoBadge}>
-                  <View style={styles.livePulseDot} />
-                  <Text style={styles.overlayVideoBadgeText}>
-                    AI Overlay • {playbackSpeed}x Slow-Mo
-                  </Text>
-                </View>
-
-                <TouchableOpacity
-                  style={styles.expandButton}
-                  onPress={() => setIsFullscreen(true)}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.expandButtonText}>⛶ Fullscreen</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
-
-          {/* Playback Controls Bar */}
-          <View style={styles.controlsRow}>
-            <View style={styles.legendRow}>
-              <View style={styles.hudLegendItem}>
-                <View style={[styles.legendDot, { backgroundColor: '#10b981' }]} />
-                <Text style={styles.legendText}>Ideal</Text>
-              </View>
-              <View style={styles.hudLegendItem}>
-                <View style={[styles.legendDot, { backgroundColor: '#ef4444' }]} />
-                <Text style={styles.legendText}>Fix</Text>
-              </View>
-            </View>
-
-            <View style={styles.speedGroup}>
-              <Text style={styles.speedLabel}>SPEED:</Text>
-              {[0.25, 0.5, 1.0].map((speed) => (
-                <TouchableOpacity
-                  key={speed}
-                  style={[styles.speedBtn, playbackSpeed === speed && styles.speedBtnActive]}
-                  onPress={() => setPlaybackSpeed(speed)}
-                >
-                  <Text style={[styles.speedBtnText, playbackSpeed === speed && styles.speedBtnTextActive]}>
-                    {speed}x
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        </View>
+        {/* 🚀 Broadcast-Grade In-Video Player with HUD, Angle Tags & Phase Scrubber */}
+        <BroadcastInVideoPlayer
+          videoUri={processedVideoUrl}
+          isLoading={isLoading}
+          leadElbowAngle={leftElbowAngle}
+          kneeFlexionAngle={leftKneeAngle}
+          rearKneeAngle={rightKneeAngle}
+          spineAngle={spineAngle}
+          exitVelocityKmh={dynamicExitVelocity}
+          sweetSpotRatio={dynamicSweetSpot}
+          headOffsetRatio={0.08}
+          shotType={shotType}
+          impactFrameRatio={calculatedImpactRatio}
+          timeSeriesAngles={timeSeries}
+          onToggleFullscreen={() => setIsFullscreen(true)}
+          isFullscreen={false}
+        />
 
         {/* 🌟 3-Second High-Level Executive Coach Takeaway Card for Clients */}
         <ExecutiveCoachSummaryCard
@@ -391,6 +347,17 @@ export const VideoAnalysisScreen: React.FC<VideoAnalysisScreenProps> = ({
           <View style={styles.tabContentSection}>
             {/* AI Coach Shot Verdict: Good/Average/Bad Shot + Estimated Shot Direction */}
             <ShotVerdictCard verdict={activeShotVerdict} />
+
+            {/* 📋 4-Pillar Biomechanical Technique Checklist & Flaw Auditor */}
+            <ShotTechniqueChecklistCard
+              shotType={shotType}
+              leadElbowAngle={leftElbowAngle}
+              kneeFlexionAngle={leftKneeAngle}
+              rearKneeAngle={rightKneeAngle}
+              spineAngle={spineAngle}
+              headOffsetRatio={0.08}
+              overallScore={typeof overallScore === 'number' ? Math.round(overallScore) : 88}
+            />
 
             {/* AI Coach Broadcast Audio Commentary Player */}
             <AICoachVoicePlayer
@@ -451,6 +418,14 @@ export const VideoAnalysisScreen: React.FC<VideoAnalysisScreenProps> = ({
               leadElbowAngle={leftElbowAngle}
               kneeFlexionAngle={leftKneeAngle}
               isHeadStacked={true}
+            />
+
+            {/* 👑 Pro Ghost Model Posture Comparison */}
+            <ProGhostSideBySideCard
+              shotType={shotType}
+              leadElbowAngle={leftElbowAngle}
+              kneeFlexionAngle={leftKneeAngle}
+              overallScore={typeof overallScore === 'number' ? Math.round(overallScore) : 88}
             />
           </View>
         )}
@@ -515,43 +490,22 @@ export const VideoAnalysisScreen: React.FC<VideoAnalysisScreenProps> = ({
       {/* Fullscreen Video Overlay Modal */}
       <Modal visible={isFullscreen} animationType="fade" statusBarTranslucent>
         <View style={styles.fullscreenContainer}>
-          <View style={styles.fullscreenHeader}>
-            <Text style={styles.fullscreenBadge}>
-              AI POSTURE OVERLAY ({playbackSpeed}X SLOW-MO)
-            </Text>
-            <TouchableOpacity
-              style={styles.closeFullscreenBtn}
-              onPress={() => setIsFullscreen(false)}
-            >
-              <Text style={styles.closeFullscreenText}>✕ CLOSE</Text>
-            </TouchableOpacity>
-          </View>
-
-          {processedVideoUrl ? (
-            <Video
-              source={{ uri: processedVideoUrl }}
-              style={styles.fullscreenVideo}
-              resizeMode={ResizeMode.CONTAIN}
-              isLooping
-              shouldPlay
-              rate={playbackSpeed}
-            />
-          ) : null}
-
-          <View style={styles.fullscreenControls}>
-            <Text style={styles.speedLabel}>PLAYBACK SPEED:</Text>
-            {[0.25, 0.5, 1.0].map((speed) => (
-              <TouchableOpacity
-                key={speed}
-                style={[styles.speedBtn, playbackSpeed === speed && styles.speedBtnActive]}
-                onPress={() => setPlaybackSpeed(speed)}
-              >
-                <Text style={[styles.speedBtnText, playbackSpeed === speed && styles.speedBtnTextActive]}>
-                  {speed}x
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <BroadcastInVideoPlayer
+            videoUri={processedVideoUrl}
+            isLoading={isLoading}
+            leadElbowAngle={leftElbowAngle}
+            kneeFlexionAngle={leftKneeAngle}
+            rearKneeAngle={rightKneeAngle}
+            spineAngle={spineAngle}
+            exitVelocityKmh={dynamicExitVelocity}
+            sweetSpotRatio={dynamicSweetSpot}
+            headOffsetRatio={0.08}
+            shotType={shotType}
+            impactFrameRatio={calculatedImpactRatio}
+            timeSeriesAngles={timeSeries}
+            onToggleFullscreen={() => setIsFullscreen(false)}
+            isFullscreen={true}
+          />
         </View>
       </Modal>
 

@@ -14,6 +14,7 @@ import { getCurrentUser, getOverlayVideoUrl, getShotHistory, isGuestEmail, ShotH
 interface ShotHistoryScreenProps {
   onBack?: () => void;
   onSelectVideo?: (videoId: string) => void;
+  onSignOut?: () => void;
   /** Changes when user signs in/out so history reloads for the active account. */
   accountKey?: string;
 }
@@ -175,6 +176,7 @@ const HistoryRow: React.FC<{
 export const ShotHistoryScreen: React.FC<ShotHistoryScreenProps> = ({
   onBack,
   onSelectVideo,
+  onSignOut,
   accountKey = 'default',
 }) => {
   const [history, setHistory] = useState<ShotHistoryItem[]>([]);
@@ -185,23 +187,25 @@ export const ShotHistoryScreen: React.FC<ShotHistoryScreenProps> = ({
 
   const loadHistory = useCallback(async () => {
     try {
+      setIsLoading(true);
       setError(null);
       setHistory([]);
       const user = await getCurrentUser();
       const guest = isGuestEmail(user.email);
-      setAccountLabel(guest ? 'Guest on this phone' : user.email);
+      setAccountLabel(guest ? 'Guest Session' : user.email);
       const data = await getShotHistory();
-      setHistory(data || []);
+      setHistory(Array.isArray(data) ? data : []);
     } catch (err: any) {
       console.log('Failed to load shot history', err);
       setHistory([]);
       setError(err?.message || 'Could not load shot history. Pull to refresh to try again.');
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    setIsLoading(true);
-    loadHistory().finally(() => setIsLoading(false));
+    loadHistory();
   }, [loadHistory, accountKey]);
 
   const handleRefresh = async () => {
@@ -247,6 +251,13 @@ export const ShotHistoryScreen: React.FC<ShotHistoryScreenProps> = ({
           <Text style={styles.backButtonText}>← BACK</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>SHOT HISTORY</Text>
+        {onSignOut ? (
+          <TouchableOpacity style={styles.signOutHeaderBtn} onPress={onSignOut} activeOpacity={0.7}>
+            <Text style={styles.signOutHeaderText}>🚪 LOGOUT</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={{ width: 60 }} />
+        )}
       </View>
 
       <Text style={styles.headerSub}>
@@ -299,11 +310,18 @@ export const ShotHistoryScreen: React.FC<ShotHistoryScreenProps> = ({
         <Text style={styles.errorText}>{error}</Text>
       ) : history.length === 0 ? (
         <View style={styles.emptyBox}>
-          <Text style={styles.emptyText}>No saved sessions yet</Text>
+          <Text style={styles.emptyIcon}>🏏</Text>
+          <Text style={styles.emptyText}>No saved shots for this account yet</Text>
           <Text style={styles.emptySubText}>
-            Record a batting shot with this account. Only your uploads appear here — not other users or old guest
-            sessions after you sign in.
+            {accountLabel.includes('Guest')
+              ? 'You are in a Guest session. Record a new shot with your camera to save it here.'
+              : `Logged in as ${accountLabel}. Only shots recorded by your account will appear here.`}
           </Text>
+          {onBack && (
+            <TouchableOpacity style={styles.emptyRecordBtn} onPress={onBack} activeOpacity={0.8}>
+              <Text style={styles.emptyRecordBtnText}>📹 RECORD YOUR FIRST SHOT</Text>
+            </TouchableOpacity>
+          )}
         </View>
       ) : (
         dailyGroups.map((group) => (
@@ -358,6 +376,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
     letterSpacing: 0.5,
+  },
+  signOutHeaderBtn: {
+    backgroundColor: '#fee2e2',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: '#fca5a5',
+  },
+  signOutHeaderText: {
+    color: '#dc2626',
+    fontSize: 10.5,
+    fontWeight: '800',
+    letterSpacing: 0.3,
   },
   headerSub: {
     color: '#64748b',
@@ -462,20 +494,44 @@ const styles = StyleSheet.create({
   },
   emptyBox: {
     alignItems: 'center',
-    paddingVertical: 40,
+    paddingVertical: 36,
+    paddingHorizontal: 20,
+    backgroundColor: '#ffffff',
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: '#e2e8f0',
+    marginTop: 10,
+  },
+  emptyIcon: {
+    fontSize: 36,
+    marginBottom: 8,
   },
   emptyText: {
     color: '#0f172a',
-    fontSize: 13,
-    fontWeight: 'bold',
+    fontSize: 14,
+    fontWeight: '800',
+    textAlign: 'center',
   },
   emptySubText: {
     color: '#64748b',
-    fontSize: 11,
+    fontSize: 11.5,
     marginTop: 6,
     textAlign: 'center',
-    lineHeight: 16,
-    paddingHorizontal: 12,
+    lineHeight: 17,
+    paddingHorizontal: 8,
+  },
+  emptyRecordBtn: {
+    backgroundColor: '#0284c7',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    marginTop: 16,
+  },
+  emptyRecordBtnText: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
   historyRow: {
     flexDirection: 'row',

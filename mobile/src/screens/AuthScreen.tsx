@@ -113,11 +113,16 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onSkipGue
     }
   };
 
-  const handleContinueAsGuest = () => {
-    // Same as before: go straight to record — never block on auth errors.
-    onSkipGuest();
-    // Best-effort: attach this phone to a guest account so history can save.
-    ensureGuestSession().catch(() => {});
+  const handleContinueAsGuest = async () => {
+    setLoading(true);
+    try {
+      await ensureGuestSession();
+    } catch (err) {
+      console.log('Guest session initialization notice:', err);
+    } finally {
+      setLoading(false);
+      onSkipGuest();
+    }
   };
 
   return (
