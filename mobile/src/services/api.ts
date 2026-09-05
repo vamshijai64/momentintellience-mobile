@@ -4,8 +4,9 @@ import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AnalysisReport } from '../types';
 
-// AWS Docker API (same as last time). Do not use port 80 — that is leftover nginx, not our app.
-export const CUSTOM_API_URL: string | null = 'http://18.144.67.31:8000/api/v1';
+// Set custom URL here if using Ngrok / LocalTunnel / Cloud server (e.g. 'https://your-ngrok-url.ngrok-free.app/api/v1')
+  export const CUSTOM_API_URL: string | null = 'http://18.144.67.31:8000/api/v1';
+// export const CUSTOM_API_URL: string | null = 'http://192.168.31.60:8000/api/v1';
 
 const AUTH_TOKEN_KEY = '@ai_cricket_coach/auth_token';
 const AUTH_EMAIL_KEY = '@ai_cricket_coach/auth_email';
@@ -272,7 +273,8 @@ export const uploadVideoForAnalysis = async (
   try {
     const uploadUrl = `${API_BASE_URL}/videos/upload`;
     console.log('Uploading video to:', uploadUrl);
-    if (onProgress) onProgress(10);
+
+    if (onProgress) onProgress(15);
 
     const headers: Record<string, string> = {
       Accept: 'application/json',
@@ -282,28 +284,11 @@ export const uploadVideoForAnalysis = async (
       headers.Authorization = `Bearer ${token}`;
     }
 
-    const controller = new AbortController();
-    const timeoutMs = 180000;
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-    let response: Response;
-    try {
-      response = await fetch(uploadUrl, {
-        method: 'POST',
-        body: formData,
-        headers,
-        signal: controller.signal,
-      });
-    } catch (fetchError: any) {
-      clearTimeout(timeoutId);
-      if (fetchError?.name === 'AbortError') {
-        throw new Error(
-          `Upload timed out after ${timeoutMs / 1000}s. Use Wi‑Fi (not mobile data) and keep the AWS API running on port 8000.`
-        );
-      }
-      throw fetchError;
-    }
-    clearTimeout(timeoutId);
+    const response = await fetch(uploadUrl, {
+      method: 'POST',
+      body: formData,
+      headers,
+    });
 
     if (onProgress) onProgress(70);
 
