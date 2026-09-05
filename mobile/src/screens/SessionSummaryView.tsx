@@ -4,7 +4,7 @@ import { ShotVerdict } from '../types';
 
 interface SessionSummaryViewProps {
   shots: ShotVerdict[];
-  overallScore: number;
+  overallScore?: number;
   onSelectShot: (index: number) => void;
   onViewComparison: () => void;
 }
@@ -39,7 +39,9 @@ export const SessionSummaryView: React.FC<SessionSummaryViewProps> = ({
       <View style={styles.statsCard}>
         <View style={styles.statRow}>
           <Text style={styles.statLabel}>Session Score</Text>
-          <Text style={[styles.statValue, styles.statValueLarge]}>{overallScore}/100</Text>
+          <Text style={[styles.statValue, styles.statValueLarge]}>
+            {typeof overallScore === 'number' ? `${Math.round(overallScore)}/100` : '—'}
+          </Text>
         </View>
         
         <View style={styles.divider} />

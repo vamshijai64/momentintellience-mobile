@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, View, Text, Platform } from 'react-native';
 import Svg, { Circle, Line, Path, Rect, G, Defs, LinearGradient, Stop } from 'react-native-svg';
+import { getProTargets } from '../config/proTargets';
 
 interface ProGhostVideoOverlayProps {
   ghostOpacity?: number; // 0.0 to 1.0
@@ -16,6 +17,7 @@ export const ProGhostVideoOverlay: React.FC<ProGhostVideoOverlayProps> = ({
   kneeFlexionAngle = 136,
 }) => {
   if (ghostOpacity <= 0.05) return null;
+  const targetElbow = getProTargets(shotType).elbow;
 
   return (
     <View style={[styles.container, { opacity: ghostOpacity }]} pointerEvents="none">
@@ -88,7 +90,7 @@ export const ProGhostVideoOverlay: React.FC<ProGhostVideoOverlayProps> = ({
         <View style={styles.goldCrownDot}>
           <Text style={styles.crownEmoji}>👑</Text>
         </View>
-        <Text style={styles.proGhostText}>PRO BENCHMARK • VIRAT KOHLI POSE (140°)</Text>
+        <Text style={styles.proGhostText}>TEXTBOOK TARGET · {targetElbow}° ELBOW</Text>
       </View>
     </View>
   );

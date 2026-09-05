@@ -10,12 +10,13 @@ interface BatImpactHeatmapViewProps {
 }
 
 export const BatImpactHeatmapView: React.FC<BatImpactHeatmapViewProps> = ({
-  sweetSpotRatio = 0.94,
-  exitVelocityKmh = 118,
-  shotDistanceMeters = 74,
-  shotType = 'COVER DRIVE',
+  sweetSpotRatio,
+  exitVelocityKmh,
+  shotDistanceMeters,
+  shotType = 'Your shot',
 }) => {
-  const isSweet = sweetSpotRatio >= 0.85;
+  const measured = sweetSpotRatio != null && exitVelocityKmh != null;
+  const isSweet = (sweetSpotRatio ?? 0) >= 0.85;
 
   return (
     <View style={styles.container}>
@@ -31,7 +32,7 @@ export const BatImpactHeatmapView: React.FC<BatImpactHeatmapViewProps> = ({
           </View>
         </View>
         <View style={styles.badgePill}>
-          <Text style={styles.badgePillText}>{isSweet ? 'SWEET-SPOT' : 'EDGE ZONE'}</Text>
+          <Text style={styles.badgePillText}>{measured ? (isSweet ? 'SWEET-SPOT' : 'EDGE ZONE') : 'NOT MEASURED'}</Text>
         </View>
       </View>
 
@@ -74,22 +75,22 @@ export const BatImpactHeatmapView: React.FC<BatImpactHeatmapViewProps> = ({
           {/* Exit Speed Metric */}
           <View style={styles.metricCard}>
             <Text style={styles.metricLabel}>BALL EXIT SPEED</Text>
-            <Text style={styles.metricBigSpeed}>{exitVelocityKmh} <Text style={styles.unitText}>KM/H</Text></Text>
-            <Text style={styles.metricSub}>Optimal Off-Drive Acceleration</Text>
+            <Text style={styles.metricBigSpeed}>{exitVelocityKmh != null ? exitVelocityKmh : '—'} {exitVelocityKmh != null ? <Text style={styles.unitText}>KM/H</Text> : null}</Text>
+            <Text style={styles.metricSub}>{exitVelocityKmh != null ? 'From this clip' : 'Needs a calibrated camera'}</Text>
           </View>
 
           {/* Power Transfer Metric */}
           <View style={styles.metricCard}>
             <Text style={styles.metricLabel}>POWER TRANSFER RATIO</Text>
-            <Text style={styles.metricBigPower}>{Math.round(sweetSpotRatio * 100)}%</Text>
-            <Text style={styles.metricSub}>Middle Blade Energy Efficiency</Text>
+            <Text style={styles.metricBigPower}>{sweetSpotRatio != null ? `${Math.round(sweetSpotRatio * 100)}%` : '—'}</Text>
+            <Text style={styles.metricSub}>{sweetSpotRatio != null ? 'Middle blade contact' : 'Not measured on this clip'}</Text>
           </View>
 
           {/* Projected Distance */}
           <View style={styles.metricCard}>
             <Text style={styles.metricLabel}>PROJECTED TRAJECTORY</Text>
-            <Text style={styles.metricBigDist}>{shotDistanceMeters} <Text style={styles.unitText}>METERS</Text></Text>
-            <Text style={styles.metricSub}>Grounded Cover Boundary (4 Runs)</Text>
+            <Text style={styles.metricBigDist}>{shotDistanceMeters != null ? shotDistanceMeters : '—'} {shotDistanceMeters != null ? <Text style={styles.unitText}>METERS</Text> : null}</Text>
+            <Text style={styles.metricSub}>{shotDistanceMeters != null ? 'Estimated carry' : 'Not measured on this clip'}</Text>
           </View>
         </View>
       </View>
@@ -99,7 +100,9 @@ export const BatImpactHeatmapView: React.FC<BatImpactHeatmapViewProps> = ({
         <View style={styles.bottomBarContent}>
           <ImpactPointIcon size={14} color="#0284c7" />
           <Text style={styles.bottomText}>
-            <Text style={styles.bottomBold}> Impact Quality:</Text> Ball struck the middle 3rd of the blade with full top-hand energy transmission.
+            <Text style={styles.bottomBold}> Impact:</Text> {measured
+              ? 'Contact quality is estimated from this clip.'
+              : 'Ball speed and sweet-spot are not measured from a phone camera. Use the stance card and the video overlay.'}
           </Text>
         </View>
       </View>

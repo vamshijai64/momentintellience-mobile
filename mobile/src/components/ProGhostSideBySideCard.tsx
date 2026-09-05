@@ -1,105 +1,143 @@
-import React, { useState } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { StyleSheet, View, Text, TouchableOpacity, Platform } from 'react-native';
+import { getProTargets } from '../config/proTargets';
 
 interface ProGhostSideBySideCardProps {
   shotType?: string;
   leadElbowAngle?: number;
   kneeFlexionAngle?: number;
+  spineAngle?: number;
   overallScore?: number;
 }
 
+type JointKey = 'ELBOW' | 'HEAD' | 'KNEE' | 'FORM';
+
+function matchPct(player: number, ideal: number, tolerance: number) {
+  const abs = Math.abs(player - ideal);
+  const pct = Math.max(0, Math.min(100, Math.round(100 - (abs / tolerance) * 100)));
+  return pct;
+}
+
 export const ProGhostSideBySideCard: React.FC<ProGhostSideBySideCardProps> = ({
-  shotType = 'COVER DRIVE',
+  shotType = 'Cover drive',
   leadElbowAngle = 138,
   kneeFlexionAngle = 132,
+  spineAngle,
   overallScore = 88,
 }) => {
-  const [selectedJoint, setSelectedJoint] = useState<'ELBOW' | 'HEAD' | 'KNEE' | 'BAT'>('ELBOW');
+  const [selectedJoint, setSelectedJoint] = useState<JointKey>('ELBOW');
 
-  const jointDetails = {
-    ELBOW: {
-      title: 'HIGH LEAD ELBOW',
-      playerVal: `${Math.round(leadElbowAngle)}°`,
-      proVal: '140° (Ideal)',
-      diff: '98% Match',
-      advice: 'High front elbow points directly along the cover drive corridor, ensuring bat face control.',
-    },
-    HEAD: {
-      title: 'HEAD-OVER-KNEE PLUMB LINE',
-      playerVal: 'Stacked (0.08)',
-      proVal: '0.00 (Locked)',
-      diff: '100% Match',
-      advice: 'Head is vertically stacked over the lead knee, transferring 100% of body momentum into the drive.',
-    },
-    KNEE: {
-      title: 'FRONT KNEE FLEXION',
-      playerVal: `${Math.round(kneeFlexionAngle)}°`,
-      proVal: '135° (Ideal)',
-      diff: '97% Match',
-      advice: 'Deep, stable front-knee bend creates a solid foundation to strike the ball on the up.',
-    },
-    BAT: {
-      title: 'BAT-SWING PLANE',
-      playerVal: '47° (Off-Drive)',
-      proVal: '45°–55°',
-      diff: '99% Match',
-      advice: 'Smooth diagonal downswing plane accelerating through the cover boundary.',
-    },
-  };
+  const elbow = Math.round(leadElbowAngle);
+  const knee = Math.round(kneeFlexionAngle);
+  const form = Math.round(overallScore);
+  const spine = typeof spineAngle === 'number' ? Math.round(spineAngle) : null;
+  const PRO = { ...getProTargets(shotType), form: 100 };
+
+  const jointDetails = useMemo(() => {
+    const elbowMatch = matchPct(elbow, PRO.elbow, 25);
+    const kneeMatch = matchPct(knee, PRO.knee, 30);
+    const headMatch = spine != null ? matchPct(spine, 12, 18) : 90;
+    const formMatch = Math.max(0, Math.min(100, form));
+
+    return {
+      ELBOW: {
+        title: 'Lead elbow',
+        playerVal: `${elbow}°`,
+        proVal: `${PRO.elbow}°`,
+        diff: `${elbowMatch}% match`,
+        status: elbowMatch >= 80 ? 'good' : elbowMatch >= 60 ? 'close' : 'fix',
+        advice:
+          elbowMatch >= 80
+            ? 'Elbow height is close to the pro model — keep guiding the bat face.'
+            : elbow < PRO.elbow
+              ? 'Lift the front elbow higher at contact to match pro form.'
+              : 'Elbow is high — stay connected through the downswing.',
+      },
+      HEAD: {
+        title: 'Head & stack',
+        playerVal: spine != null ? `${spine}° tilt` : 'Stacked',
+        proVal: 'Still / stacked',
+        diff: `${headMatch}% match`,
+        status: headMatch >= 80 ? 'good' : headMatch >= 60 ? 'close' : 'fix',
+        advice:
+          headMatch >= 80
+            ? 'Head position is stable over the front side.'
+            : 'Keep the head still and over the front foot through the hit.',
+      },
+      KNEE: {
+        title: 'Front knee',
+        playerVal: `${knee}°`,
+        proVal: `${PRO.knee}°`,
+        diff: `${kneeMatch}% match`,
+        status: kneeMatch >= 80 ? 'good' : kneeMatch >= 60 ? 'close' : 'fix',
+        advice:
+          kneeMatch >= 80
+            ? 'Front knee flexion matches a solid pro stride.'
+            : knee < PRO.knee
+              ? 'Bend the front knee more to load the front side.'
+              : 'Knee is deep — brace without collapsing inward.',
+      },
+      FORM: {
+        title: 'Overall form',
+        playerVal: `${form}`,
+        proVal: `${PRO.form}`,
+        diff: `${formMatch}% match`,
+        status: formMatch >= 80 ? 'good' : formMatch >= 65 ? 'close' : 'fix',
+        advice:
+          formMatch >= 80
+            ? 'Strong overall shape vs pro — polish the weakest joint next.'
+            : 'Prioritize the Fix rows to close the gap with the pro model.',
+      },
+    } as const;
+  }, [elbow, knee, spine, form, PRO.elbow, PRO.knee, PRO.form]);
 
   const currentInfo = jointDetails[selectedJoint];
+  const syncScore = Math.round(
+    (matchPct(elbow, PRO.elbow, 25) + matchPct(knee, PRO.knee, 30) + form) / 3
+  );
+
+  const statusColor =
+    currentInfo.status === 'good' ? '#15803d' : currentInfo.status === 'close' ? '#b45309' : '#b91c1c';
+  const statusBg =
+    currentInfo.status === 'good' ? '#dcfce7' : currentInfo.status === 'close' ? '#fef3c7' : '#fee2e2';
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.headerRow}>
-        <View>
-          <Text style={styles.headerEyebrow}>SIDE-BY-SIDE VISUAL AUDIT</Text>
-          <Text style={styles.headerTitle}>YOUR POSE VS PRO MASTERCLASS</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.headerEyebrow}>Player vs pro</Text>
+          <Text style={styles.headerTitle}>Pose comparison</Text>
+          <Text style={styles.headerSub}>{shotType}</Text>
         </View>
         <View style={styles.scorePill}>
-          <Text style={styles.scorePillText}>97.4% SYNC</Text>
+          <Text style={styles.scorePillText}>{syncScore}%</Text>
+          <Text style={styles.scorePillSub}>sync</Text>
         </View>
       </View>
 
-      {/* Visual Dual Figures Display */}
       <View style={styles.dualFigureBox}>
-        {/* Left: Player Impact Silhouette */}
         <View style={styles.figureColumn}>
           <View style={styles.figureHeader}>
             <View style={[styles.statusDot, { backgroundColor: '#10b981' }]} />
-            <Text style={styles.figureTitle}>YOUR STROKE</Text>
+            <Text style={styles.figureTitle}>You</Text>
           </View>
-
-          {/* Player Posture Graphic */}
           <View style={styles.stickContainer}>
-            {/* Head */}
             <View style={[styles.headNode, styles.headPlayer]} />
-            {/* Torso */}
             <View style={[styles.torsoLine, styles.torsoPlayer]} />
-            {/* Lead Arm & Elbow */}
             <View style={[styles.leadArmUpper, styles.armPlayer]} />
             <View style={[styles.leadArmForearm, styles.armPlayer]} />
-            {/* Bat */}
             <View style={[styles.batLine, styles.batPlayer]} />
-            {/* Front Leg */}
             <View style={[styles.frontThigh, styles.legPlayer]} />
             <View style={[styles.frontShin, styles.legPlayer]} />
-            {/* Back Leg */}
             <View style={[styles.backLeg, styles.legPlayer]} />
-            {/* Plumb Line */}
             <View style={styles.plumbLine} />
-
-            {/* Joint Callout Badge */}
             <View style={[styles.jointCallout, { top: 38, left: -6 }]}>
-              <Text style={styles.jointCalloutText}>{Math.round(leadElbowAngle)}°</Text>
+              <Text style={styles.jointCalloutText}>{elbow}°</Text>
             </View>
           </View>
-
-          <Text style={styles.figureScoreText}>Technique: {overallScore}%</Text>
+          <Text style={styles.figureScoreText}>Form {form}</Text>
         </View>
 
-        {/* Center VS Divider */}
         <View style={styles.vsDivider}>
           <View style={styles.vsLine} />
           <View style={styles.vsBadge}>
@@ -108,76 +146,66 @@ export const ProGhostSideBySideCard: React.FC<ProGhostSideBySideCardProps> = ({
           <View style={styles.vsLine} />
         </View>
 
-        {/* Right: Gold Pro Benchmark Model */}
         <View style={styles.figureColumn}>
           <View style={styles.figureHeader}>
             <View style={[styles.statusDot, { backgroundColor: '#fbbf24' }]} />
-            <Text style={[styles.figureTitle, { color: '#fbbf24' }]}>PRO BENCHMARK</Text>
+            <Text style={[styles.figureTitle, { color: '#fbbf24' }]}>Pro</Text>
           </View>
-
-          {/* Pro Posture Graphic */}
           <View style={styles.stickContainer}>
-            {/* Head */}
             <View style={[styles.headNode, styles.headPro]} />
-            {/* Torso */}
             <View style={[styles.torsoLine, styles.torsoPro]} />
-            {/* Lead Arm & Elbow */}
             <View style={[styles.leadArmUpper, styles.armPro]} />
             <View style={[styles.leadArmForearm, styles.armPro]} />
-            {/* Bat */}
             <View style={[styles.batLine, styles.batPro]} />
-            {/* Front Leg */}
             <View style={[styles.frontThigh, styles.legPro]} />
             <View style={[styles.frontShin, styles.legPro]} />
-            {/* Back Leg */}
             <View style={[styles.backLeg, styles.legPro]} />
-            {/* Plumb Line */}
             <View style={[styles.plumbLine, { borderColor: '#fbbf24' }]} />
-
-            {/* Joint Callout Badge */}
             <View style={[styles.jointCallout, styles.jointCalloutPro, { top: 38, left: -6 }]}>
-              <Text style={[styles.jointCalloutText, { color: '#022c22' }]}>140°</Text>
+              <Text style={[styles.jointCalloutText, { color: '#422006' }]}>{PRO.elbow}° tgt</Text>
             </View>
           </View>
-
-          <Text style={[styles.figureScoreText, { color: '#fbbf24' }]}>Pro Benchmark: 100%</Text>
+          <Text style={[styles.figureScoreText, { color: '#fbbf24' }]}>Target 100</Text>
         </View>
       </View>
 
-      {/* Interactive Checkpoint Selector Tabs */}
       <View style={styles.tabsRow}>
-        {(['ELBOW', 'HEAD', 'KNEE', 'BAT'] as const).map((key) => {
-          const isActive = selectedJoint === key;
+        {(
+          [
+            { key: 'ELBOW', label: 'Elbow' },
+            { key: 'HEAD', label: 'Head' },
+            { key: 'KNEE', label: 'Knee' },
+            { key: 'FORM', label: 'Form' },
+          ] as const
+        ).map((tab) => {
+          const isActive = selectedJoint === tab.key;
           return (
             <TouchableOpacity
-              key={key}
+              key={tab.key}
               style={[styles.tabBtn, isActive && styles.tabBtnActive]}
-              onPress={() => setSelectedJoint(key)}
+              onPress={() => setSelectedJoint(tab.key)}
             >
-              <Text style={[styles.tabText, isActive && styles.tabTextActive]}>
-                {key === 'ELBOW' ? '🦾 Elbow' : key === 'HEAD' ? '🎯 Head' : key === 'KNEE' ? '🦵 Knee' : '🏏 Bat'}
-              </Text>
+              <Text style={[styles.tabText, isActive && styles.tabTextActive]}>{tab.label}</Text>
             </TouchableOpacity>
           );
         })}
       </View>
 
-      {/* Selected Checkpoint Detail Box */}
       <View style={styles.detailBox}>
         <View style={styles.detailHeader}>
           <Text style={styles.detailTitle}>{currentInfo.title}</Text>
-          <View style={styles.matchPill}>
-            <Text style={styles.matchPillText}>{currentInfo.diff}</Text>
+          <View style={[styles.matchPill, { backgroundColor: statusBg }]}>
+            <Text style={[styles.matchPillText, { color: statusColor }]}>{currentInfo.diff}</Text>
           </View>
         </View>
 
         <View style={styles.metricsRow}>
           <View style={styles.metricItem}>
-            <Text style={styles.metricItemLabel}>YOU</Text>
+            <Text style={styles.metricItemLabel}>You</Text>
             <Text style={styles.metricItemValGreen}>{currentInfo.playerVal}</Text>
           </View>
           <View style={styles.metricItem}>
-            <Text style={styles.metricItemLabel}>PRO TARGET</Text>
+            <Text style={styles.metricItemLabel}>Pro target</Text>
             <Text style={styles.metricItemValGold}>{currentInfo.proVal}</Text>
           </View>
         </View>
@@ -190,43 +218,64 @@ export const ProGhostSideBySideCard: React.FC<ProGhostSideBySideCardProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#0a1224',
+    backgroundColor: '#0f172a',
     borderRadius: 18,
     padding: 16,
     marginVertical: 10,
     borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.25)',
+    borderColor: 'rgba(56, 189, 248, 0.22)',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 10,
+      },
+      android: { elevation: 3 },
+    }),
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: 14,
+    gap: 10,
   },
   headerEyebrow: {
-    color: '#38bdf8',
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.8,
+    color: '#7dd3fc',
+    fontSize: 12,
+    fontWeight: '600',
   },
   headerTitle: {
     color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '800',
+    fontSize: 16,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  headerSub: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '500',
     marginTop: 2,
   },
   scorePill: {
     backgroundColor: 'rgba(16, 185, 129, 0.15)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: '#10b981',
+    alignItems: 'center',
   },
   scorePillText: {
     color: '#34d399',
-    fontSize: 11,
-    fontWeight: '900',
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  scorePillSub: {
+    color: '#6ee7b7',
+    fontSize: 10,
+    fontWeight: '600',
   },
   dualFigureBox: {
     flexDirection: 'row',
@@ -255,9 +304,8 @@ const styles = StyleSheet.create({
   },
   figureTitle: {
     color: '#34d399',
-    fontSize: 10.5,
-    fontWeight: '800',
-    letterSpacing: 0.4,
+    fontSize: 13,
+    fontWeight: '700',
   },
   stickContainer: {
     width: 100,
@@ -360,22 +408,22 @@ const styles = StyleSheet.create({
   jointCallout: {
     position: 'absolute',
     backgroundColor: '#10b981',
-    paddingHorizontal: 4,
-    paddingVertical: 1.5,
-    borderRadius: 4,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 5,
   },
   jointCalloutPro: {
     backgroundColor: '#fbbf24',
   },
   jointCalloutText: {
     color: '#022c22',
-    fontSize: 8.5,
-    fontWeight: '900',
+    fontSize: 10,
+    fontWeight: '800',
   },
   figureScoreText: {
     color: '#94a3b8',
-    fontSize: 10,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '600',
     marginTop: 6,
   },
   vsDivider: {
@@ -390,15 +438,15 @@ const styles = StyleSheet.create({
   },
   vsBadge: {
     backgroundColor: '#1e293b',
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 5,
     marginVertical: 4,
   },
   vsBadgeText: {
-    color: '#64748b',
-    fontSize: 9,
-    fontWeight: '800',
+    color: '#94a3b8',
+    fontSize: 10,
+    fontWeight: '700',
   },
   tabsRow: {
     flexDirection: 'row',
@@ -408,8 +456,8 @@ const styles = StyleSheet.create({
   tabBtn: {
     flex: 1,
     backgroundColor: 'rgba(15, 23, 42, 0.6)',
-    paddingVertical: 7,
-    borderRadius: 8,
+    paddingVertical: 8,
+    borderRadius: 9,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.06)',
@@ -420,12 +468,12 @@ const styles = StyleSheet.create({
   },
   tabText: {
     color: '#94a3b8',
-    fontSize: 10,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '600',
   },
   tabTextActive: {
-    color: '#38bdf8',
-    fontWeight: '900',
+    color: '#7dd3fc',
+    fontWeight: '700',
   },
   detailBox: {
     backgroundColor: 'rgba(15, 23, 42, 0.7)',
@@ -442,19 +490,17 @@ const styles = StyleSheet.create({
   },
   detailTitle: {
     color: '#ffffff',
-    fontSize: 11.5,
-    fontWeight: '800',
+    fontSize: 14,
+    fontWeight: '700',
   },
   matchPill: {
-    backgroundColor: 'rgba(16, 185, 129, 0.15)',
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
   },
   matchPillText: {
-    color: '#34d399',
-    fontSize: 10,
-    fontWeight: '800',
+    fontSize: 11,
+    fontWeight: '700',
   },
   metricsRow: {
     flexDirection: 'row',
@@ -464,28 +510,29 @@ const styles = StyleSheet.create({
   metricItem: {
     flex: 1,
     backgroundColor: 'rgba(2, 6, 23, 0.5)',
-    padding: 8,
-    borderRadius: 6,
+    padding: 10,
+    borderRadius: 8,
   },
   metricItemLabel: {
-    color: '#64748b',
-    fontSize: 8.5,
-    fontWeight: '800',
-    marginBottom: 2,
+    color: '#94a3b8',
+    fontSize: 11,
+    fontWeight: '600',
+    marginBottom: 3,
   },
   metricItemValGreen: {
     color: '#34d399',
-    fontSize: 13,
-    fontWeight: '900',
+    fontSize: 16,
+    fontWeight: '800',
   },
   metricItemValGold: {
     color: '#fbbf24',
-    fontSize: 13,
-    fontWeight: '900',
+    fontSize: 16,
+    fontWeight: '800',
   },
   adviceText: {
     color: '#cbd5e1',
-    fontSize: 11,
-    lineHeight: 15,
+    fontSize: 13,
+    lineHeight: 19,
+    fontWeight: '500',
   },
 });

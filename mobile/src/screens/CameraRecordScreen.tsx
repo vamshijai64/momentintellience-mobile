@@ -20,6 +20,7 @@ interface CameraRecordScreenProps {
   onViewProfile?: () => void;
   onViewGuide?: () => void;
   onSignOut?: () => void;
+  onBusyChange?: (busy: boolean) => void;
 }
 
 export const CameraRecordScreen: React.FC<CameraRecordScreenProps> = ({
@@ -28,6 +29,7 @@ export const CameraRecordScreen: React.FC<CameraRecordScreenProps> = ({
   onViewProfile,
   onViewGuide,
   onSignOut,
+  onBusyChange,
 }) => {
   const [permission, requestPermission] = useCameraPermissions();
   const [micPermission, requestMicPermission] = useMicrophonePermissions();
@@ -49,6 +51,7 @@ export const CameraRecordScreen: React.FC<CameraRecordScreenProps> = ({
   const cameraRef = useRef<any>(null);
   const isDetectingFrameRef = useRef(false);
   const cameraReadyResolverRef = useRef<(() => void) | null>(null);
+  const cancelledRef = useRef(false);
 
   // Resolves once the CameraView reports itself ready again after a `mode`
   // change (or after `timeoutMs`, whichever comes first, so a slow/missing
@@ -140,26 +143,29 @@ export const CameraRecordScreen: React.FC<CameraRecordScreenProps> = ({
             // Prompt for stance orientation before uploading
             Alert.alert(
               'Select Batting Stance',
-              'For accurate MediaPipe skeletal analysis, please confirm stance:',
+              'Pick the batting hand, or go back and record again.',
               [
                 {
-                  text: 'Right-hand Batsman',
+                  text: 'Right-hand',
                   onPress: () => {
                     setBattingStance('RIGHT');
                     processRecordedVideo(recordedVideo.uri, 'RIGHT');
                   },
                 },
                 {
-                  text: 'Left-hand Batsman',
+                  text: 'Left-hand',
                   onPress: () => {
                     setBattingStance('LEFT');
                     processRecordedVideo(recordedVideo.uri, 'LEFT');
                   },
                 },
                 {
-                  text: 'Auto-Detect',
+                  text: '← Record again',
                   style: 'cancel',
-                  onPress: () => processRecordedVideo(recordedVideo.uri, 'AUTO'),
+                  onPress: () => {
+                    setLastVideoUri(null);
+                    setIsRecording(false);
+                  },
                 },
               ]
             );
@@ -186,14 +192,17 @@ export const CameraRecordScreen: React.FC<CameraRecordScreenProps> = ({
     const stanceToSend = stanceOverride || battingStance;
     setLastVideoUri(videoUri);
     setUploadError(null);
+    cancelledRef.current = false;
     try {
       setIsUploading(true);
+      onBusyChange?.(true);
       setUploadProgress(2);
       setStageText('Uploading video...');
 
       const result = await uploadVideoForAnalysis(videoUri, 'CRICKET', (progress) => {
         setUploadProgress(Math.max(2, Math.min(70, progress * 0.7)));
       }, stanceToSend);
+      if (cancelledRef.current) return;
 
       const videoId = result.id || result.video_id;
       if (!videoId) {
@@ -201,27 +210,42 @@ export const CameraRecordScreen: React.FC<CameraRecordScreenProps> = ({
       }
 
       setUploadProgress(72);
-      setStageText('Queued for analysis...');
+      setStageText('Analyzing your shot...');
 
       const report = await pollForAnalysisResult(videoId, 240, 1500, (update: PollStatusUpdate) => {
+        if (cancelledRef.current) return;
         const elapsedSec = Math.round(update.elapsedMs / 1000);
-        const label = STAGE_LABELS[update.status] || 'Analyzing your shot biomechanics...';
+        const label = STAGE_LABELS[update.status] || 'Analyzing your shot...';
         setStageText(`${label} (${elapsedSec}s)`);
         setUploadProgress(Math.min(97, 72 + update.attempt * 0.4));
       });
+      if (cancelledRef.current) return;
 
       setUploadProgress(100);
       setStageText('Done!');
-      setIsUploading(false);
-
       if (onVideoProcessed) {
         onVideoProcessed(report.id || videoId, videoId, videoUri);
       }
     } catch (error: any) {
+      if (cancelledRef.current) return;
       console.error('Upload/analysis error', error);
-      setIsUploading(false);
       setUploadError(error?.message || 'Something went wrong while uploading or analyzing your shot.');
+    } finally {
+      if (!cancelledRef.current) {
+        setIsUploading(false);
+        onBusyChange?.(false);
+      }
     }
+  };
+
+  const handleBackToRecord = () => {
+    cancelledRef.current = true;
+    setIsUploading(false);
+    setUploadProgress(0);
+    setStageText('Preparing upload...');
+    setUploadError(null);
+    setLastVideoUri(null);
+    onBusyChange?.(false);
   };
 
   const handleRetry = () => {
@@ -233,6 +257,7 @@ export const CameraRecordScreen: React.FC<CameraRecordScreenProps> = ({
   const handleDismissError = () => {
     setUploadError(null);
     setLastVideoUri(null);
+    handleBackToRecord();
   };
 
   const handlePickGalleryVideo = async () => {
@@ -272,9 +297,9 @@ export const CameraRecordScreen: React.FC<CameraRecordScreenProps> = ({
               },
             },
             {
-              text: 'Auto detect',
+              text: '← Record again',
               style: 'cancel',
-              onPress: () => processRecordedVideo(selectedVideoUri, battingStance),
+              onPress: () => setLastVideoUri(null),
             },
           ]
         );
@@ -327,7 +352,7 @@ export const CameraRecordScreen: React.FC<CameraRecordScreenProps> = ({
               onPress={onViewGuide}
               activeOpacity={0.75}
             >
-              <Text style={styles.guideButtonText}>📖 View Onboarding & Framing Guide</Text>
+              <Text style={styles.guideButtonText}>How to film for a correct analysis</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -371,50 +396,53 @@ export const CameraRecordScreen: React.FC<CameraRecordScreenProps> = ({
         </View>
       )}
 
-      {/* Batting Stance Selector — helps the AI Coach orient shot direction correctly */}
-      <View style={styles.stanceBar}>
-        <Text style={styles.stanceLabel}>STANCE</Text>
-        {(['AUTO', 'RIGHT', 'LEFT'] as const).map((stance) => (
-          <TouchableOpacity
-            key={stance}
-            style={[styles.stancePill, battingStance === stance && styles.stancePillActive]}
-            onPress={() => setBattingStance(stance)}
-          >
-            <Text style={[styles.stancePillText, battingStance === stance && styles.stancePillTextActive]}>
-              {stance === 'AUTO' ? 'AUTO' : stance === 'RIGHT' ? 'RIGHT-HAND' : 'LEFT-HAND'}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      {!isUploading && (
+        <View style={styles.stanceBar}>
+          <Text style={styles.stanceLabel}>STANCE</Text>
+          {(['AUTO', 'RIGHT', 'LEFT'] as const).map((stance) => (
+            <TouchableOpacity
+              key={stance}
+              style={[styles.stancePill, battingStance === stance && styles.stancePillActive]}
+              onPress={() => setBattingStance(stance)}
+            >
+              <Text style={[styles.stancePillText, battingStance === stance && styles.stancePillTextActive]}>
+                {stance === 'AUTO' ? 'AUTO' : stance === 'RIGHT' ? 'RIGHT-HAND' : 'LEFT-HAND'}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
 
-      {/* Floating Shutter / Controls Bar */}
-      <View style={styles.controlsBar}>
-        <TouchableOpacity style={styles.flipButton} onPress={toggleCameraFacing}>
-          <Text style={styles.flipButtonText}>🔄 FLIP</Text>
-        </TouchableOpacity>
-
-        {isUploading ? (
-          <View style={styles.loadingBox}>
-            <ActivityIndicator size="large" color="#10b981" />
-            <Text style={styles.loadingText}>{stageText}</Text>
-            <View style={styles.progressTrack}>
-              <View style={[styles.progressFill, { width: `${Math.round(uploadProgress)}%` }]} />
-            </View>
-            <Text style={styles.progressPercent}>{Math.round(uploadProgress)}%</Text>
+      {isUploading ? (
+        <View style={styles.busyOverlay}>
+          <ActivityIndicator size="large" color="#10b981" />
+          <Text style={styles.loadingText}>{stageText}</Text>
+          <View style={styles.progressTrack}>
+            <View style={[styles.progressFill, { width: `${Math.round(uploadProgress)}%` }]} />
           </View>
-        ) : (
+          <Text style={styles.progressPercent}>{Math.round(uploadProgress)}%</Text>
+          <TouchableOpacity style={styles.backToRecordBtn} onPress={handleBackToRecord} activeOpacity={0.8}>
+            <Text style={styles.backToRecordBtnText}>← Record again</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <View style={styles.controlsBar}>
+          <TouchableOpacity style={styles.flipButton} onPress={toggleCameraFacing}>
+            <Text style={styles.flipButtonText}>🔄 FLIP</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity
             style={[styles.recordButton, isRecording && styles.recordButtonActive]}
             onPress={handleToggleRecord}
           >
             <View style={[styles.innerRecordDot, isRecording && styles.innerRecordDotActive]} />
           </TouchableOpacity>
-        )}
 
-        <TouchableOpacity style={styles.galleryButton} onPress={handlePickGalleryVideo}>
-          <Text style={styles.galleryButtonText}>📁 UPLOAD</Text>
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity style={styles.galleryButton} onPress={handlePickGalleryVideo}>
+            <Text style={styles.galleryButtonText}>📁 UPLOAD</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Upload/Analysis Failure — real error + retry instead of a broken screen */}
       {uploadError && (
@@ -724,6 +752,32 @@ const styles = StyleSheet.create({
     height: 32,
     borderRadius: 6,
     backgroundColor: '#ef4444',
+  },
+  busyOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(2, 6, 23, 0.92)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+    zIndex: 40,
+  },
+  backToRecordBtn: {
+    marginTop: 22,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 22,
+    borderWidth: 1.5,
+    borderColor: '#38bdf8',
+    backgroundColor: 'rgba(8, 47, 73, 0.8)',
+  },
+  backToRecordBtnText: {
+    color: '#7dd3fc',
+    fontSize: 14,
+    fontWeight: '800',
   },
   loadingBox: {
     backgroundColor: 'rgba(15, 23, 42, 0.94)',

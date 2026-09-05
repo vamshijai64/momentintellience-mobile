@@ -140,12 +140,13 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onSkipGue
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.headerBox}>
-          <Image
-            source={require('../../assets/cricsense_logo_transparent.png')}
-            style={styles.brandLogo}
-            resizeMode="contain"
-          />
-          <Text style={styles.brandName}>AI Cricket Coach</Text>
+          <View style={styles.logoWrap}>
+            <Image
+              source={require('../../assets/athletx.png')}
+              style={styles.brandLogo}
+              resizeMode="contain"
+            />
+          </View>
           <Text style={styles.appSub}>
             Sign in once — your shots stay saved in History even after you close the app
           </Text>
@@ -291,17 +292,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 28,
   },
-  brandLogo: {
-    width: 160,
-    height: 90,
-    marginBottom: 12,
+  logoWrap: {
+    backgroundColor: '#000000',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    marginBottom: 14,
   },
-  brandName: {
-    color: '#0f172a',
-    fontSize: 26,
-    fontWeight: '800',
-    letterSpacing: -0.4,
-    marginBottom: 8,
+  brandLogo: {
+    width: 180,
+    height: 100,
   },
   appSub: {
     color: '#64748b',

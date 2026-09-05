@@ -12,9 +12,6 @@ import {
 
 const { width } = Dimensions.get('window');
 
-const ACCENT = '#0d9488';
-const ACCENT_DEEP = '#0f766e';
-
 interface SplashScreenProps {
   statusText?: string;
 }
@@ -43,11 +40,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#faf9f6" />
-      
-      {/* Subtle Background Glow Blobs */}
-      <View style={styles.blobTop} />
-      <View style={styles.blobBottom} />
+      <StatusBar barStyle="light-content" backgroundColor="#000000" />
 
       <Animated.View
         style={[
@@ -58,34 +51,29 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
           },
         ]}
       >
-        {/* Main App Logo */}
         <View style={styles.logoContainer}>
           <Image
-            source={require('../../assets/cricsense_logo_transparent.png')}
+            source={require('../../assets/athletx.png')}
             style={styles.logoImage}
             resizeMode="contain"
           />
         </View>
 
-        {/* Brand Name & Tagline */}
-        <Text style={styles.brandTitle}>AI Cricket Coach</Text>
         <Text style={styles.brandTagline}>
-          Pro Shot Analysis & Movement Intelligence
+          AI-powered sports performance intelligence
         </Text>
 
-        {/* Loader Indicator */}
         <View style={styles.loaderBox}>
-          <ActivityIndicator size="large" color={ACCENT} />
+          <ActivityIndicator size="large" color="#3b82f6" />
           <Text style={styles.statusText}>{statusText}</Text>
         </View>
       </Animated.View>
 
-      {/* Footer Info */}
       <View style={styles.footer}>
         <View style={styles.badge}>
           <Text style={styles.badgeText}>v1.0.0</Text>
         </View>
-        <Text style={styles.footerText}>Powered by Moment Intelligence AI</Text>
+        <Text style={styles.footerText}>Athletix · Sports Performance AI</Text>
       </View>
     </View>
   );
@@ -94,29 +82,9 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#faf9f6',
+    backgroundColor: '#000000',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  blobTop: {
-    position: 'absolute',
-    top: -60,
-    left: -60,
-    width: 220,
-    height: 220,
-    borderRadius: 110,
-    backgroundColor: '#ccfbf1',
-    opacity: 0.6,
-  },
-  blobBottom: {
-    position: 'absolute',
-    bottom: -80,
-    right: -80,
-    width: 260,
-    height: 260,
-    borderRadius: 130,
-    backgroundColor: '#fef3c7',
-    opacity: 0.5,
   },
   content: {
     alignItems: 'center',
@@ -124,30 +92,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   logoContainer: {
-    width: width * 0.6,
-    height: 160,
+    width: width * 0.72,
+    height: 200,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
+    marginBottom: 12,
   },
   logoImage: {
     width: '100%',
     height: '100%',
   },
-  brandTitle: {
-    fontSize: 28,
-    fontWeight: '900',
-    color: '#0f172a',
-    letterSpacing: -0.5,
-    marginBottom: 6,
-    textAlign: 'center',
-  },
   brandTagline: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
-    color: '#64748b',
+    color: '#94a3b8',
     textAlign: 'center',
     marginBottom: 36,
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
   },
   loaderBox: {
     alignItems: 'center',
@@ -156,7 +118,7 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 14,
     fontWeight: '600',
-    color: ACCENT_DEEP,
+    color: '#93c5fd',
     letterSpacing: -0.2,
   },
   footer: {
@@ -166,7 +128,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   badge: {
-    backgroundColor: '#e2e8f0',
+    backgroundColor: '#1e293b',
     paddingHorizontal: 10,
     paddingVertical: 3,
     borderRadius: 999,
@@ -174,11 +136,11 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#475569',
+    color: '#94a3b8',
   },
   footerText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#94a3b8',
+    color: '#64748b',
   },
 });

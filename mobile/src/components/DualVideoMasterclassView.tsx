@@ -1,27 +1,172 @@
-import React, { useState, useRef } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, Dimensions, Platform } from 'react-native';
-import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, StyleSheet, View, Text, TouchableOpacity, Platform } from 'react-native';
+import { Video, ResizeMode } from 'expo-av';
+import * as ImagePicker from 'expo-image-picker';
 import { CrownGoldIcon } from './icons/AppIcons';
+import { clearProVideoUri, loadSavedProVideoUri, saveProVideoUri } from '../config/proReferenceVideos';
+import { getProTargets } from '../config/proTargets';
 
 interface DualVideoMasterclassViewProps {
   playerVideoUri?: string;
   proReferenceVideoUri?: string;
   shotType?: string;
+  leadElbowAngle?: number;
+  kneeFlexionAngle?: number;
+  spineAngle?: number;
+  overallScore?: number;
 }
 
-const { width } = Dimensions.get('window');
+type CompareRow = {
+  id: string;
+  label: string;
+  you: string;
+  pro: string;
+  delta: string;
+  status: 'good' | 'close' | 'fix';
+  tip: string;
+};
+
+function statusFromDelta(absDelta: number, goodMax: number, closeMax: number): CompareRow['status'] {
+  if (absDelta <= goodMax) return 'good';
+  if (absDelta <= closeMax) return 'close';
+  return 'fix';
+}
 
 export const DualVideoMasterclassView: React.FC<DualVideoMasterclassViewProps> = ({
   playerVideoUri,
   proReferenceVideoUri,
-  shotType = 'COVER DRIVE',
+  shotType = 'Cover drive',
+  leadElbowAngle,
+  kneeFlexionAngle,
+  spineAngle,
+  overallScore,
 }) => {
   const [isPlaying, setIsPlaying] = useState(true);
-  const [playbackSpeed, setPlaybackSpeed] = useState<number>(0.5);
+  const [playbackSpeed, setPlaybackSpeed] = useState(0.5);
   const [activeTab, setActiveTab] = useState<'SPLIT' | 'PLAYER' | 'PRO'>('SPLIT');
+  const [focusRow, setFocusRow] = useState('elbow');
+  const [savedProUri, setSavedProUri] = useState<string | null>(null);
 
   const playerVideoRef = useRef<Video>(null);
   const proVideoRef = useRef<Video>(null);
+  const PRO_TARGETS = getProTargets(shotType);
+
+  const elbow = typeof leadElbowAngle === 'number' ? Math.round(leadElbowAngle) : null;
+  const knee = typeof kneeFlexionAngle === 'number' ? Math.round(kneeFlexionAngle) : null;
+  const spine = typeof spineAngle === 'number' ? Math.round(spineAngle) : null;
+
+  const rows: CompareRow[] = useMemo(() => {
+    const list: CompareRow[] = [];
+
+    if (elbow != null) {
+      const d = elbow - PRO_TARGETS.elbow;
+      const abs = Math.abs(d);
+      list.push({
+        id: 'elbow',
+        label: 'Lead elbow',
+        you: `${elbow}°`,
+        pro: `${PRO_TARGETS.elbow}°`,
+        delta: d === 0 ? 'On target' : `${d > 0 ? '+' : ''}${d}°`,
+        status: statusFromDelta(abs, 8, 18),
+        tip:
+          abs <= 8
+            ? 'Elbow height matches the pro model.'
+            : d < 0
+              ? 'Lift the front elbow higher through contact.'
+              : 'Elbow is a bit high — keep it guiding, not lifting away.',
+      });
+    } else {
+      list.push({
+        id: 'elbow',
+        label: 'Lead elbow',
+        you: '—',
+        pro: `${PRO_TARGETS.elbow}°`,
+        delta: 'Pending',
+        status: 'close',
+        tip: 'Elbow angle will show after analysis completes.',
+      });
+    }
+
+    if (knee != null) {
+      const d = knee - PRO_TARGETS.knee;
+      const abs = Math.abs(d);
+      list.push({
+        id: 'knee',
+        label: 'Front knee',
+        you: `${knee}°`,
+        pro: `${PRO_TARGETS.knee}°`,
+        delta: d === 0 ? 'On target' : `${d > 0 ? '+' : ''}${d}°`,
+        status: statusFromDelta(abs, 10, 20),
+        tip:
+          abs <= 10
+            ? 'Front knee flexion is close to pro form.'
+            : d < 0
+              ? 'Bend the front knee more into the stride.'
+              : 'Knee is deep — hold balance without collapsing.',
+      });
+    } else {
+      list.push({
+        id: 'knee',
+        label: 'Front knee',
+        you: '—',
+        pro: `${PRO_TARGETS.knee}°`,
+        delta: 'Pending',
+        status: 'close',
+        tip: 'Knee angle will show after analysis completes.',
+      });
+    }
+
+    if (spine != null) {
+      const d = spine - PRO_TARGETS.spine;
+      const abs = Math.abs(d);
+      list.push({
+        id: 'spine',
+        label: 'Spine tilt',
+        you: `${spine}°`,
+        pro: `${PRO_TARGETS.spine}°`,
+        delta: d === 0 ? 'On target' : `${d > 0 ? '+' : ''}${d}°`,
+        status: statusFromDelta(abs, 6, 12),
+        tip:
+          abs <= 6
+            ? 'Body stack is close to the pro line.'
+            : 'Keep shoulders stacked over hips — less side lean.',
+      });
+    }
+
+    list.push({
+      id: 'form',
+      label: 'Overall form',
+      you: typeof overallScore === 'number' ? `${Math.round(overallScore)}` : '—',
+      pro: '100',
+      delta:
+        typeof overallScore === 'number'
+          ? `${Math.max(0, 100 - Math.round(overallScore))} behind`
+          : 'Pending',
+      status:
+        typeof overallScore === 'number'
+          ? overallScore >= 80
+            ? 'good'
+            : overallScore >= 65
+              ? 'close'
+              : 'fix'
+          : 'close',
+      tip:
+        typeof overallScore === 'number' && overallScore >= 80
+          ? 'Strong match to pro shape — refine the weakest joint next.'
+          : 'Focus on the red/amber rows first to close the gap.',
+    });
+
+    return list;
+  }, [elbow, knee, spine, overallScore, PRO_TARGETS.elbow, PRO_TARGETS.knee, PRO_TARGETS.spine]);
+
+  const active = rows.find((r) => r.id === focusRow) || rows[0];
+  const matchScore = useMemo(() => {
+    if (typeof overallScore === 'number') return Math.round(overallScore);
+    const scored = rows.filter((r) => r.status !== 'close' || r.you !== '—');
+    if (!scored.length) return null;
+    const pts = scored.reduce((sum, r) => sum + (r.status === 'good' ? 100 : r.status === 'close' ? 72 : 48), 0);
+    return Math.round(pts / scored.length);
+  }, [overallScore, rows]);
 
   const togglePlayPause = async () => {
     if (isPlaying) {
@@ -41,45 +186,87 @@ export const DualVideoMasterclassView: React.FC<DualVideoMasterclassViewProps> =
     await proVideoRef.current?.setRateAsync(speed, true);
   };
 
-  // Fallback demonstration video for the pro benchmark if custom URL is not supplied
-  const effectiveProUri = proReferenceVideoUri || playerVideoUri;
+  useEffect(() => {
+    let cancelled = false;
+    loadSavedProVideoUri(shotType).then((uri) => {
+      if (!cancelled) setSavedProUri(uri);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [shotType]);
+
+  const pickKohliVideo = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Allow gallery access to pick a Kohli / pro clip.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['videos'] as any,
+      allowsEditing: false,
+      quality: 1,
+    });
+    if (result.canceled || !result.assets?.[0]?.uri) return;
+    const uri = result.assets[0].uri;
+    await saveProVideoUri(shotType, uri);
+    setSavedProUri(uri);
+  };
+
+  const removeKohliVideo = async () => {
+    await clearProVideoUri(shotType);
+    setSavedProUri(null);
+  };
+
+  const effectiveProUri = proReferenceVideoUri || savedProUri;
+  const hasRealProVideo = Boolean(effectiveProUri);
+
+  const statusColor = (s: CompareRow['status']) =>
+    s === 'good' ? '#15803d' : s === 'close' ? '#b45309' : '#b91c1c';
+  const statusBg = (s: CompareRow['status']) =>
+    s === 'good' ? '#dcfce7' : s === 'close' ? '#fef3c7' : '#fee2e2';
+  const statusLabel = (s: CompareRow['status']) =>
+    s === 'good' ? 'Match' : s === 'close' ? 'Close' : 'Fix';
 
   return (
     <View style={styles.container}>
-      {/* Broadcast Header */}
       <View style={styles.headerRow}>
         <View style={styles.titleGroup}>
-          <Text style={styles.eyebrow}>BROADCAST SPLIT-SCREEN REPLAY</Text>
-          <Text style={styles.title}>PLAYER VS PRO MASTERCLASS</Text>
+          <Text style={styles.eyebrow}>Player vs pro</Text>
+          <Text style={styles.title}>Masterclass comparison</Text>
+          <Text style={styles.subtitle}>{shotType} · your clip on the left</Text>
         </View>
-        <View style={styles.livePill}>
-          <View style={styles.liveDot} />
-          <Text style={styles.liveText}>SYNCED 0.5X</Text>
-        </View>
+        {matchScore != null && (
+          <View style={styles.scorePill}>
+            <Text style={styles.scorePillValue}>{matchScore}</Text>
+            <Text style={styles.scorePillLabel}>form</Text>
+          </View>
+        )}
       </View>
 
-      {/* Mode Switch Tabs (SPLIT | YOUR SHOT | PRO MODEL) */}
       <View style={styles.tabRow}>
-        {(['SPLIT', 'PLAYER', 'PRO'] as const).map((tab) => {
-          const isActive = activeTab === tab;
+        {(
+          [
+            { id: 'SPLIT', label: 'Split' },
+            { id: 'PLAYER', label: 'You' },
+            { id: 'PRO', label: 'Pro' },
+          ] as const
+        ).map((tab) => {
+          const isActive = activeTab === tab.id;
           return (
             <TouchableOpacity
-              key={tab}
+              key={tab.id}
               style={[styles.tabBtn, isActive && styles.tabBtnActive]}
-              onPress={() => setActiveTab(tab)}
+              onPress={() => setActiveTab(tab.id)}
               activeOpacity={0.8}
             >
-              <Text style={[styles.tabText, isActive && styles.tabTextActive]}>
-                {tab === 'SPLIT' ? '📺 Side-by-Side Dual View' : tab === 'PLAYER' ? '👤 Player Replay' : '👑 Pro Benchmark'}
-              </Text>
+              <Text style={[styles.tabText, isActive && styles.tabTextActive]}>{tab.label}</Text>
             </TouchableOpacity>
           );
         })}
       </View>
 
-      {/* Video Viewport Container */}
       <View style={styles.viewportContainer}>
-        {/* Left / Player Video Panel */}
         {(activeTab === 'SPLIT' || activeTab === 'PLAYER') && (
           <View style={[styles.videoPanel, activeTab === 'SPLIT' && styles.splitLeft]}>
             {playerVideoUri ? (
@@ -95,23 +282,27 @@ export const DualVideoMasterclassView: React.FC<DualVideoMasterclassViewProps> =
               />
             ) : (
               <View style={styles.placeholderBox}>
-                <Text style={styles.placeholderText}>Loading Replay...</Text>
+                <Text style={styles.placeholderText}>Loading your shot…</Text>
               </View>
             )}
             <View style={styles.overlayTagPlayer}>
               <View style={[styles.tagDot, { backgroundColor: '#10b981' }]} />
-              <Text style={styles.tagTextPlayer}>YOUR SHOT (AI OVERLAY)</Text>
+              <Text style={styles.tagTextPlayer}>You</Text>
             </View>
+            {elbow != null && (
+              <View style={styles.youMetricChip}>
+                <Text style={styles.youMetricText}>Elbow {elbow}°</Text>
+              </View>
+            )}
           </View>
         )}
 
-        {/* Right / Pro Model Video Panel */}
         {(activeTab === 'SPLIT' || activeTab === 'PRO') && (
           <View style={[styles.videoPanel, activeTab === 'SPLIT' && styles.splitRight]}>
-            {effectiveProUri ? (
+            {hasRealProVideo ? (
               <Video
                 ref={proVideoRef}
-                source={{ uri: effectiveProUri }}
+                source={{ uri: effectiveProUri as string }}
                 style={styles.videoPlayer}
                 resizeMode={ResizeMode.CONTAIN}
                 shouldPlay={isPlaying}
@@ -121,48 +312,53 @@ export const DualVideoMasterclassView: React.FC<DualVideoMasterclassViewProps> =
               />
             ) : (
               <View style={styles.placeholderBox}>
-                <Text style={styles.placeholderText}>Loading Masterclass...</Text>
+                <Text style={styles.placeholderKicker}>Not a second video</Text>
+                <Text style={styles.placeholderText}>Pro target pose</Text>
+                <Text style={styles.placeholderHint}>
+                  Tap Set Kohli video below and pick a clip from your phone.
+                </Text>
+                <Text style={styles.proTargetLine}>Target elbow {PRO_TARGETS.elbow}°</Text>
+                <Text style={styles.proTargetLine}>Knee {PRO_TARGETS.knee}°</Text>
               </View>
             )}
-            {/* Pro Masterclass Gold Visual Overlay & Target HUD */}
-            <View style={styles.proGoldenFilter}>
+            <View style={styles.proFrame}>
               <View style={styles.proTopBanner}>
-                <View style={styles.proBannerRow}>
-                  <CrownGoldIcon size={12} color="#fbbf24" />
-                  <Text style={styles.proBannerText}>PRO MASTERCLASS | 100% IDEAL FORM</Text>
-                </View>
-              </View>
-
-              {/* Floating Pro Keypoint Telemetry Callouts */}
-              <View style={styles.proTelemetryBadgeElbow}>
-                <Text style={styles.proTelemetryText}>140° LEAD ELBOW [IDEAL]</Text>
-              </View>
-
-              <View style={styles.proTelemetryBadgeKnee}>
-                <Text style={styles.proTelemetryText}>135° FRONT KNEE [PERFECT]</Text>
-              </View>
-
-              <View style={styles.proTelemetryBadgeHead}>
-                <Text style={styles.proTelemetryText}>HEAD OVER BALL [LOCKED]</Text>
+                <CrownGoldIcon size={12} color="#fbbf24" />
+                <Text style={styles.proBannerText}>Pro model</Text>
               </View>
             </View>
-
             <View style={styles.overlayTagPro}>
               <View style={[styles.tagDot, { backgroundColor: '#fbbf24' }]} />
-              <Text style={styles.tagTextPro}>PRO MODEL (GOLD STANDARD)</Text>
+              <Text style={styles.tagTextPro}>Pro</Text>
+            </View>
+            <View style={styles.proMetricChip}>
+              <Text style={styles.proMetricText}>Target {PRO_TARGETS.elbow}°</Text>
             </View>
           </View>
         )}
       </View>
 
-      {/* Synchronized Playback Control Bar */}
+      <View style={styles.proSetRow}>
+        <TouchableOpacity style={styles.setProBtn} onPress={pickKohliVideo} activeOpacity={0.85}>
+          <Text style={styles.setProBtnText}>
+            {hasRealProVideo ? 'Change Kohli video' : 'Set Kohli video'}
+          </Text>
+        </TouchableOpacity>
+        {hasRealProVideo ? (
+          <TouchableOpacity style={styles.clearProBtn} onPress={removeKohliVideo} activeOpacity={0.85}>
+            <Text style={styles.clearProBtnText}>Remove</Text>
+          </TouchableOpacity>
+        ) : null}
+      </View>
+      <Text style={styles.proSetHint}>
+        Left is always your analysed shot. Right is only a Kohli/pro clip if you pick one from the gallery.
+      </Text>
+
       <View style={styles.controlBar}>
         <TouchableOpacity style={styles.playBtn} onPress={togglePlayPause} activeOpacity={0.8}>
           <Text style={styles.playBtnIcon}>{isPlaying ? '⏸' : '▶'}</Text>
-          <Text style={styles.playBtnText}>{isPlaying ? 'PAUSE' : 'PLAY'}</Text>
+          <Text style={styles.playBtnText}>{isPlaying ? 'Pause' : 'Play'}</Text>
         </TouchableOpacity>
-
-        {/* Speed Selector Buttons */}
         <View style={styles.speedGroup}>
           {[0.25, 0.5, 1.0].map((s) => {
             const isSelected = playbackSpeed === s;
@@ -173,11 +369,53 @@ export const DualVideoMasterclassView: React.FC<DualVideoMasterclassViewProps> =
                 onPress={() => changeSpeed(s)}
               >
                 <Text style={[styles.speedText, isSelected && styles.speedTextActive]}>
-                  {s}x
+                  {s === 1 ? '1×' : `${s}×`}
                 </Text>
               </TouchableOpacity>
             );
           })}
+        </View>
+      </View>
+
+      {/* Clear analysis table */}
+      <View style={styles.analysisCard}>
+        <Text style={styles.analysisTitle}>Clear analysis</Text>
+        <Text style={styles.analysisSub}>Tap a row to see the coaching tip</Text>
+
+        <View style={styles.tableHead}>
+          <Text style={[styles.th, styles.colLabel]}>Check</Text>
+          <Text style={[styles.th, styles.colYou]}>You</Text>
+          <Text style={[styles.th, styles.colPro]}>Target</Text>
+          <Text style={[styles.th, styles.colGap]}>Gap</Text>
+        </View>
+
+        {rows.map((row) => {
+          const selected = focusRow === row.id;
+          return (
+            <TouchableOpacity
+              key={row.id}
+              style={[styles.tableRow, selected && styles.tableRowActive]}
+              onPress={() => setFocusRow(row.id)}
+              activeOpacity={0.85}
+            >
+              <Text style={[styles.td, styles.colLabel, styles.tdLabel]}>{row.label}</Text>
+              <Text style={[styles.td, styles.colYou, styles.tdYou]}>{row.you}</Text>
+              <Text style={[styles.td, styles.colPro, styles.tdPro]}>{row.pro}</Text>
+              <View style={[styles.statusChip, { backgroundColor: statusBg(row.status) }]}>
+                <Text style={[styles.statusChipText, { color: statusColor(row.status) }]}>
+                  {statusLabel(row.status)}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+
+        <View style={styles.tipBox}>
+          <Text style={styles.tipKicker}>{active.label}</Text>
+          <Text style={styles.tipDelta}>
+            You {active.you} · Target {active.pro} · {active.delta}
+          </Text>
+          <Text style={styles.tipText}>{active.tip}</Text>
         </View>
       </View>
     </View>
@@ -190,51 +428,62 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     padding: 14,
     marginVertical: 10,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: '#e2e8f0',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#0f172a',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.06,
+        shadowRadius: 10,
+      },
+      android: { elevation: 2 },
+    }),
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: 12,
+    gap: 10,
   },
-  titleGroup: {
-    flex: 1,
-  },
+  titleGroup: { flex: 1 },
   eyebrow: {
-    color: '#0284c7',
-    fontSize: 9.5,
-    fontWeight: '800',
-    letterSpacing: 0.8,
+    color: '#0369a1',
+    fontSize: 12,
+    fontWeight: '600',
   },
   title: {
     color: '#0f172a',
-    fontSize: 13,
-    fontWeight: '800',
+    fontSize: 16,
+    fontWeight: '700',
     marginTop: 2,
   },
-  livePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#dcfce7',
-    paddingHorizontal: 8,
-    paddingVertical: 3.5,
-    borderRadius: 6,
+  subtitle: {
+    color: '#64748b',
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  scorePill: {
+    backgroundColor: '#ecfdf5',
     borderWidth: 1,
-    borderColor: '#bbf7d0',
-    gap: 5,
+    borderColor: '#a7f3d0',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    alignItems: 'center',
+    minWidth: 58,
   },
-  liveDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#15803d',
+  scorePillValue: {
+    color: '#047857',
+    fontSize: 18,
+    fontWeight: '800',
   },
-  liveText: {
-    color: '#15803d',
-    fontSize: 9,
-    fontWeight: '900',
+  scorePillLabel: {
+    color: '#059669',
+    fontSize: 10,
+    fontWeight: '600',
   },
   tabRow: {
     flexDirection: 'row',
@@ -243,33 +492,33 @@ const styles = StyleSheet.create({
   },
   tabBtn: {
     flex: 1,
-    backgroundColor: '#f1f5f9',
-    paddingVertical: 7,
-    borderRadius: 8,
+    backgroundColor: '#f8fafc',
+    paddingVertical: 8,
+    borderRadius: 10,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#e2e8f0',
   },
   tabBtnActive: {
     backgroundColor: '#e0f2fe',
-    borderColor: '#0284c7',
+    borderColor: '#38bdf8',
   },
   tabText: {
     color: '#64748b',
-    fontSize: 10,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '600',
   },
   tabTextActive: {
-    color: '#0284c7',
-    fontWeight: '900',
+    color: '#0369a1',
+    fontWeight: '700',
   },
   viewportContainer: {
     flexDirection: 'row',
-    height: 230,
+    height: 220,
     borderRadius: 14,
     overflow: 'hidden',
     backgroundColor: '#0f172a',
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: '#e2e8f0',
   },
   videoPanel: {
@@ -291,11 +540,33 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 10,
   },
   placeholderText: {
+    color: '#e2e8f0',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  placeholderKicker: {
+    color: '#fbbf24',
+    fontSize: 10,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  placeholderHint: {
     color: '#94a3b8',
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '500',
+    textAlign: 'center',
+    paddingHorizontal: 12,
+    marginTop: 6,
+    lineHeight: 16,
+  },
+  proTargetLine: {
+    color: '#fde68a',
+    fontSize: 13,
+    fontWeight: '700',
+    marginTop: 6,
   },
   overlayTagPlayer: {
     position: 'absolute',
@@ -304,10 +575,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(15, 23, 42, 0.85)',
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 4,
-    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    gap: 5,
   },
   overlayTagPro: {
     position: 'absolute',
@@ -316,25 +587,115 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(15, 23, 42, 0.85)',
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 4,
-    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    gap: 5,
   },
   tagDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   tagTextPlayer: {
     color: '#34d399',
-    fontSize: 8,
-    fontWeight: '800',
+    fontSize: 11,
+    fontWeight: '700',
   },
   tagTextPro: {
     color: '#fbbf24',
-    fontSize: 8,
-    fontWeight: '800',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  youMetricChip: {
+    position: 'absolute',
+    bottom: 8,
+    left: 8,
+    backgroundColor: 'rgba(16, 185, 129, 0.92)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  youMetricText: {
+    color: '#022c22',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  proMetricChip: {
+    position: 'absolute',
+    bottom: 8,
+    left: 8,
+    backgroundColor: 'rgba(251, 191, 36, 0.95)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  proMetricText: {
+    color: '#422006',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  proFrame: {
+    ...StyleSheet.absoluteFillObject,
+    borderWidth: 1.5,
+    borderColor: 'rgba(251, 191, 36, 0.55)',
+    pointerEvents: 'none',
+  },
+  proTopBanner: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(15, 23, 42, 0.88)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderBottomLeftRadius: 8,
+  },
+  proBannerText: {
+    color: '#fbbf24',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  proSetRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 10,
+  },
+  setProBtn: {
+    flex: 1,
+    backgroundColor: '#fef3c7',
+    borderWidth: 1,
+    borderColor: '#fbbf24',
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  setProBtnText: {
+    color: '#92400e',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  clearProBtn: {
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    justifyContent: 'center',
+    backgroundColor: '#f8fafc',
+  },
+  clearProBtnText: {
+    color: '#64748b',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  proSetHint: {
+    color: '#64748b',
+    fontSize: 11,
+    fontWeight: '500',
+    marginTop: 6,
+    lineHeight: 16,
   },
   controlBar: {
     flexDirection: 'row',
@@ -350,8 +711,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#0284c7',
     paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 8,
+    paddingVertical: 8,
+    borderRadius: 10,
     gap: 6,
   },
   playBtnIcon: {
@@ -360,101 +721,126 @@ const styles = StyleSheet.create({
   },
   playBtnText: {
     color: '#ffffff',
-    fontSize: 11,
-    fontWeight: '900',
+    fontSize: 13,
+    fontWeight: '700',
   },
   speedGroup: {
     flexDirection: 'row',
     gap: 6,
   },
   speedBtn: {
-    backgroundColor: '#f1f5f9',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 6,
+    backgroundColor: '#f8fafc',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: '#e2e8f0',
   },
   speedBtnActive: {
     backgroundColor: '#e0f2fe',
-    borderColor: '#0284c7',
+    borderColor: '#38bdf8',
   },
   speedText: {
     color: '#64748b',
-    fontSize: 10.5,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '600',
   },
   speedTextActive: {
-    color: '#0284c7',
-    fontWeight: '900',
+    color: '#0369a1',
+    fontWeight: '700',
   },
-  proGoldenFilter: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(251, 191, 36, 0.06)',
-    borderWidth: 1.5,
-    borderColor: '#fbbf24',
-    zIndex: 10,
-    pointerEvents: 'none',
+  analysisCard: {
+    marginTop: 12,
+    backgroundColor: '#f8fafc',
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
-  proTopBanner: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: 'rgba(15, 23, 42, 0.88)',
-    paddingVertical: 3,
-    paddingHorizontal: 6,
-    borderBottomWidth: 1,
-    borderBottomColor: '#fbbf24',
-    alignItems: 'center',
+  analysisTitle: {
+    color: '#0f172a',
+    fontSize: 15,
+    fontWeight: '700',
   },
-  proBannerRow: {
+  analysisSub: {
+    color: '#64748b',
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 2,
+    marginBottom: 10,
+  },
+  tableHead: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    paddingBottom: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+    marginBottom: 4,
   },
-  proBannerText: {
-    color: '#fbbf24',
-    fontSize: 7.5,
-    fontWeight: '900',
-    letterSpacing: 0.3,
+  th: {
+    color: '#94a3b8',
+    fontSize: 11,
+    fontWeight: '600',
   },
-  proTelemetryBadgeElbow: {
-    position: 'absolute',
-    top: 55,
-    right: 6,
-    backgroundColor: 'rgba(15, 23, 42, 0.85)',
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    borderRadius: 4,
+  tableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 9,
+    paddingHorizontal: 4,
+    borderRadius: 8,
+  },
+  tableRowActive: {
+    backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: '#fbbf24',
+    borderColor: '#bae6fd',
   },
-  proTelemetryBadgeKnee: {
-    position: 'absolute',
-    bottom: 35,
-    right: 6,
-    backgroundColor: 'rgba(15, 23, 42, 0.85)',
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    borderRadius: 4,
+  td: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  colLabel: { flex: 1.3 },
+  colYou: { flex: 0.8, textAlign: 'center' },
+  colPro: { flex: 0.8, textAlign: 'center' },
+  colGap: { width: 58, textAlign: 'right' },
+  tdLabel: { color: '#0f172a' },
+  tdYou: { color: '#047857' },
+  tdPro: { color: '#b45309' },
+  statusChip: {
+    width: 58,
+    alignItems: 'center',
+    paddingVertical: 3,
+    borderRadius: 999,
+  },
+  statusChipText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  tipBox: {
+    marginTop: 10,
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: '#0284c7',
     borderWidth: 1,
-    borderColor: '#fbbf24',
+    borderColor: '#e2e8f0',
   },
-  proTelemetryBadgeHead: {
-    position: 'absolute',
-    top: 30,
-    left: 6,
-    backgroundColor: 'rgba(15, 23, 42, 0.85)',
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: '#10b981',
+  tipKicker: {
+    color: '#0369a1',
+    fontSize: 12,
+    fontWeight: '700',
   },
-  proTelemetryText: {
-    color: '#fbbf24',
-    fontSize: 7.5,
-    fontWeight: '800',
+  tipDelta: {
+    color: '#64748b',
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  tipText: {
+    color: '#0f172a',
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '500',
+    marginTop: 6,
   },
 });

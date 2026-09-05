@@ -1,19 +1,24 @@
 {
   "expo": {
-    "name": "AI Cricket Coach",
+    "name": "Athletix",
     "slug": "moment-intelligence-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/cricsense_logo_transparent.png",
+    "icon": "./assets/athletx.png",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/cricsense_logo_transparent.png",
+      "image": "./assets/athletx.png",
       "resizeMode": "contain",
-      "backgroundColor": "#faf9f6"
+      "backgroundColor": "#000000"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true
+        }
+      }
     },
     "android": {
       "package": "com.anonymous.momentintelligencemobile",
@@ -27,22 +32,22 @@
         "INTERNET"
       ],
       "adaptiveIcon": {
-        "foregroundImage": "./assets/cricsense_logo_transparent.png",
-        "backgroundColor": "#faf9f6"
+        "foregroundImage": "./assets/athletx.png",
+        "backgroundColor": "#000000"
       }
     },
     "plugins": [
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow AI Cricket Coach to access camera for shot analysis.",
-          "microphonePermission": "Allow AI Cricket Coach to record audio."
+          "cameraPermission": "Allow Athletix to access camera for shot analysis.",
+          "microphonePermission": "Allow Athletix to record audio."
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow AI Cricket Coach to access your gallery videos."
+          "photosPermission": "Allow Athletix to access your gallery videos."
         }
       ]
     ],

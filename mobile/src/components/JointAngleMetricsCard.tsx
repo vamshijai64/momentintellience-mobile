@@ -16,10 +16,10 @@ interface JointAngleMetricsCardProps {
   shotType?: string;
   flawSummary?: string;
   scores?: {
-    stability: number;
-    balance: number;
-    symmetry: number;
-    mobility: number;
+    stability?: number;
+    balance?: number;
+    symmetry?: number;
+    mobility?: number;
   };
   observations?: string[];
   recommendations?: string[];
@@ -33,20 +33,20 @@ const STATUS_THEME = {
 
 export const JointAngleMetricsCard: React.FC<JointAngleMetricsCardProps> = ({
   metrics,
-  overallScore = 88.5,
-  shotType = 'COVER DRIVE',
-  flawSummary = 'High front elbow posture and solid stance balance.',
-  scores = { stability: 85, balance: 90, symmetry: 88, mobility: 92 },
+  overallScore,
+  shotType = 'Your shot',
+  flawSummary = '',
+  scores,
   observations = [],
   recommendations = [],
 }) => {
-  const scoreColor = overallScore >= 80 ? '#15803d' : overallScore >= 60 ? '#b45309' : '#b91c1c';
+  const scoreColor = (overallScore ?? 0) >= 80 ? '#15803d' : (overallScore ?? 0) >= 60 ? '#b45309' : '#b91c1c';
 
   const scoreItems = [
-    { label: 'STABILITY', value: scores.stability },
-    { label: 'BALANCE', value: scores.balance },
-    { label: 'SYMMETRY', value: scores.symmetry },
-    { label: 'MOBILITY', value: scores.mobility },
+    { label: 'STABILITY', value: scores?.stability },
+    { label: 'BALANCE', value: scores?.balance },
+    { label: 'SYMMETRY', value: scores?.symmetry },
+    { label: 'MOBILITY', value: scores?.mobility },
   ];
 
   return (
@@ -59,7 +59,7 @@ export const JointAngleMetricsCard: React.FC<JointAngleMetricsCardProps> = ({
         </View>
 
         <View style={styles.scoreContainer}>
-          <Text style={[styles.scoreNumber, { color: scoreColor }]}>{overallScore.toFixed(0)}%</Text>
+          <Text style={[styles.scoreNumber, { color: scoreColor }]}>{typeof overallScore === 'number' ? `${overallScore.toFixed(0)}%` : '—'}</Text>
           <Text style={styles.scoreLabel}>BIOMECHANIC FORM</Text>
         </View>
       </View>
@@ -68,13 +68,14 @@ export const JointAngleMetricsCard: React.FC<JointAngleMetricsCardProps> = ({
       <Text style={styles.sectionTitle}>MOVEMENT KINEMATIC SCORES</Text>
       <View style={styles.scoresGrid}>
         {scoreItems.map((item) => {
-          const color = item.value >= 80 ? '#15803d' : item.value >= 55 ? '#b45309' : '#b91c1c';
+          const value = item.value;
+          const color = value == null ? '#64748b' : value >= 80 ? '#15803d' : value >= 55 ? '#b45309' : '#b91c1c';
           return (
             <View key={item.label} style={styles.scoreCard}>
               <Text style={styles.scoreCardLabel}>{item.label}</Text>
-              <Text style={[styles.scoreCardVal, { color }]}>{item.value.toFixed(0)}%</Text>
+              <Text style={[styles.scoreCardVal, { color }]}>{value != null ? `${value.toFixed(0)}%` : '—'}</Text>
               <View style={styles.scoreCardTrack}>
-                <View style={[styles.scoreCardFill, { width: `${Math.min(100, Math.max(0, item.value))}%`, backgroundColor: color }]} />
+                <View style={[styles.scoreCardFill, { width: `${value != null ? Math.min(100, Math.max(0, value)) : 0}%`, backgroundColor: color }]} />
               </View>
             </View>
           );

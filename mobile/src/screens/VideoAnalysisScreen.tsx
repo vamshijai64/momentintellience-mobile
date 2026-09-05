@@ -4,6 +4,7 @@ import { Video, ResizeMode } from 'expo-av';
 import { JointAngleMetricsCard } from '../components/JointAngleMetricsCard';
 import { ShotVerdictCard } from '../components/ShotVerdictCard';
 import { ExecutiveCoachSummaryCard } from '../components/ExecutiveCoachSummaryCard';
+import { StanceBalanceCard } from '../components/StanceBalanceCard';
 import { AICoachVoicePlayer } from '../components/AICoachVoicePlayer';
 import { ShotMasterclassGuideCard } from '../components/ShotMasterclassGuideCard';
 import { BatImpactHeatmapView } from '../components/BatImpactHeatmapView';
@@ -45,9 +46,16 @@ export const VideoAnalysisScreen: React.FC<VideoAnalysisScreenProps> = ({
   const [report, setReport] = useState<AnalysisReport | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+  const [coachCuesEnabled, setCoachCuesEnabled] = useState<boolean>(false);
+  const [playbackSnapshot, setPlaybackSnapshot] = useState<{
+    positionMillis: number;
+    isPlaying: boolean;
+    playbackSpeed: number;
+  }>({ positionMillis: 0, isPlaying: true, playbackSpeed: 0.5 });
   const [selectedShotIndex, setSelectedShotIndex] = useState<number>(0);
   const [viewMode, setViewMode] = useState<ViewMode>('detail');
   const [showScorecardModal, setShowScorecardModal] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<'verdict' | 'metrics' | 'stadium' | 'masterclass'>('verdict');
 
   // Fresh uploads poll until done; history opens the saved report instantly.
   useEffect(() => {
@@ -62,16 +70,13 @@ export const VideoAnalysisScreen: React.FC<VideoAnalysisScreenProps> = ({
     const loadReport = async () => {
       const { getAnalysisReport, pollForAnalysisResult } = require('../services/api');
       try {
-        if (fromHistory || !videoUri) {
-          const data: AnalysisReport = await getAnalysisReport(targetId);
-          if (data?.overlay_video_url || data?.overlay_video_path || data?.overall_score) {
-            setReport(data);
-          }
-        } else {
-          const data: AnalysisReport = await pollForAnalysisResult(targetId);
-          if (data?.overlay_video_url || data?.overlay_video_path || data?.overall_score) {
-            setReport(data);
-          }
+        let data: AnalysisReport = await getAnalysisReport(targetId);
+        const status = String((data as any)?.status || '').toUpperCase();
+        if (!fromHistory && (status === 'PENDING' || status === 'PROCESSING')) {
+          data = await pollForAnalysisResult(targetId);
+        }
+        if (data?.overlay_video_url || data?.overlay_video_path || data?.overall_score || data?.report_json) {
+          setReport(data);
         }
       } catch (err: any) {
         console.log('Analysis load fallback', err);
@@ -95,12 +100,12 @@ export const VideoAnalysisScreen: React.FC<VideoAnalysisScreenProps> = ({
     : videoUri;
 
   // Extract dynamic scores and shot metrics from API report
-  const overallScore = report?.overall_score || report?.report_json?.scores?.overall_score || (isLoading ? 0 : 89);
+  const overallScore = report?.overall_score ?? report?.report_json?.scores?.overall_score;
   const scores = {
-    stability: report?.stability_score || report?.report_json?.scores?.stability_score || 85,
-    balance: report?.balance_score || report?.report_json?.scores?.balance_score || 90,
-    symmetry: report?.symmetry_score || report?.report_json?.scores?.symmetry_score || 88,
-    mobility: report?.mobility_score || report?.report_json?.scores?.mobility_score || 92,
+    stability: report?.stability_score ?? report?.report_json?.scores?.stability_score,
+    balance: report?.balance_score ?? report?.report_json?.scores?.balance_score,
+    symmetry: report?.symmetry_score ?? report?.report_json?.scores?.symmetry_score,
+    mobility: report?.mobility_score ?? report?.report_json?.scores?.mobility_score,
   };
   const observations = report?.report_json?.observations || [];
   const recommendations = report?.report_json?.recommendations || [];
@@ -111,32 +116,32 @@ export const VideoAnalysisScreen: React.FC<VideoAnalysisScreenProps> = ({
     ? report.report_json.shots
     : (report?.report_json?.shot_verdict ? [report.report_json.shot_verdict] : []);
   const activeShotVerdict = shots[selectedShotIndex] || shots[0] || report?.report_json?.shot_verdict;
+  const coachingCue = report?.report_json?.coaching_cue;
 
   const shotClassification = report?.report_json?.shot_classification;
-  const shotType = activeShotVerdict?.shot_type || shotClassification?.shot_type || (isLoading ? 'ANALYZING KINEMATICS...' : 'SHOT ANALYSIS COMPLETE');
-  const flawSummary = activeShotVerdict?.reason || shotClassification?.shot_flaw || report?.report_json?.summary || 'High front elbow posture and solid stance balance.';
+  const shotType = activeShotVerdict?.shot_type || shotClassification?.shot_type || (isLoading ? 'Analyzing…' : 'Your shot');
+  const flawSummary = coachingCue?.bottom || activeShotVerdict?.reason || shotClassification?.shot_flaw || '';
 
   // Get joint angles at IMPACT FRAME only (not averaged across all frames)
   const timeSeries = report?.report_json?.time_series_angles || [];
   const impactFrame = activeShotVerdict?.impact_frame || 1;
   
-  let leftElbowAngle = 142;
-  let rightElbowAngle = 138;
-  let leftKneeAngle = 136;
-  let rightKneeAngle = 104;
-  let spineAngle = 128;
+  let leftElbowAngle: number | undefined;
+  let rightElbowAngle: number | undefined;
+  let leftKneeAngle: number | undefined;
+  let rightKneeAngle: number | undefined;
+  let spineAngle: number | undefined;
 
   if (timeSeries && timeSeries.length > 0) {
-    // Find the frame data closest to impact frame
-    const impactFrameData = timeSeries.find((t: any) => t.frame === impactFrame) || 
-                           timeSeries[Math.floor(timeSeries.length / 2)]; // Fallback to middle frame
-    
+    const impactFrameData = timeSeries.find((t: any) => t.frame === impactFrame) ||
+                           timeSeries[Math.floor(timeSeries.length / 2)];
+
     if (impactFrameData) {
-      leftElbowAngle = Math.round(impactFrameData.left_elbow || leftElbowAngle);
-      rightElbowAngle = Math.round(impactFrameData.right_elbow || rightElbowAngle);
-      leftKneeAngle = Math.round(impactFrameData.left_knee || leftKneeAngle);
-      rightKneeAngle = Math.round(impactFrameData.right_knee || rightKneeAngle);
-      spineAngle = Math.round(impactFrameData.spine_inclination || spineAngle);
+      if (impactFrameData.left_elbow != null) leftElbowAngle = Math.round(impactFrameData.left_elbow);
+      if (impactFrameData.right_elbow != null) rightElbowAngle = Math.round(impactFrameData.right_elbow);
+      if (impactFrameData.left_knee != null) leftKneeAngle = Math.round(impactFrameData.left_knee);
+      if (impactFrameData.right_knee != null) rightKneeAngle = Math.round(impactFrameData.right_knee);
+      if (impactFrameData.spine_inclination != null) spineAngle = Math.round(impactFrameData.spine_inclination);
     }
   }
 
@@ -145,39 +150,34 @@ export const VideoAnalysisScreen: React.FC<VideoAnalysisScreenProps> = ({
     ? Math.min(0.95, Math.max(0.05, impactFrame / totalFrames)) 
     : 0.62;
 
-  const kineticEfficiency = shotClassification?.kinetic_efficiency ?? activeShotVerdict?.technique_score ?? 88;
-  const executionScore = activeShotVerdict?.execution_score ?? (typeof overallScore === 'number' ? Math.round(overallScore) : 85);
-  const dynamicExitVelocity = Math.round(75 + (executionScore / 100) * 45);
-  const dynamicSweetSpot = Math.min(0.98, Math.max(0.65, (kineticEfficiency / 100)));
-
   const metricsData = [
     {
       name: 'Lead Front Elbow',
-      angle: leftElbowAngle,
+      angle: leftElbowAngle ?? 0,
       idealRange: '110° - 155°',
-      status: (leftElbowAngle >= 110 && leftElbowAngle <= 155 ? 'CORRECT' : 'INCORRECT') as 'CORRECT' | 'INCORRECT',
-      recommendation: leftElbowAngle >= 110 ? 'Optimal high lead elbow posture maintained through swing.' : 'Elbow drooped during downswing. Keep lead front elbow higher.',
+      status: (leftElbowAngle != null && leftElbowAngle >= 110 && leftElbowAngle <= 155 ? 'CORRECT' : 'INCORRECT') as 'CORRECT' | 'INCORRECT',
+      recommendation: leftElbowAngle != null && leftElbowAngle >= 110 ? 'Lead elbow is in a good range.' : 'Keep the front elbow higher through the shot.',
     },
     {
       name: 'Rear Right Knee',
-      angle: rightKneeAngle,
+      angle: rightKneeAngle ?? 0,
       idealRange: '125° - 165°',
-      status: (rightKneeAngle >= 125 && rightKneeAngle <= 165 ? 'CORRECT' : 'INCORRECT') as 'CORRECT' | 'INCORRECT',
-      recommendation: rightKneeAngle >= 125 ? 'Solid rear leg support balance.' : 'Knee collapsed excessively (Delta -21°). Extend rear leg for power.',
+      status: (rightKneeAngle != null && rightKneeAngle >= 125 && rightKneeAngle <= 165 ? 'CORRECT' : 'INCORRECT') as 'CORRECT' | 'INCORRECT',
+      recommendation: rightKneeAngle != null && rightKneeAngle >= 125 ? 'Back leg is braced.' : 'Do not let the back knee collapse.',
     },
     {
       name: 'Front Left Knee',
-      angle: leftKneeAngle,
+      angle: leftKneeAngle ?? 0,
       idealRange: '125° - 165°',
-      status: (leftKneeAngle >= 125 && leftKneeAngle <= 165 ? 'CORRECT' : 'INCORRECT') as 'CORRECT' | 'INCORRECT',
-      recommendation: 'Stable front knee drive over the ball.',
+      status: (leftKneeAngle != null && leftKneeAngle >= 125 && leftKneeAngle <= 165 ? 'CORRECT' : 'INCORRECT') as 'CORRECT' | 'INCORRECT',
+      recommendation: 'Front knee should stay bent and stable over the stride.',
     },
     {
-      name: 'Spine Inclination',
-      angle: spineAngle,
-      idealRange: '115° - 160°',
-      status: (spineAngle >= 115 && spineAngle <= 160 ? 'CORRECT' : 'INCORRECT') as 'CORRECT' | 'INCORRECT',
-      recommendation: 'Upright spinal posture maintained through stroke.',
+      name: 'Spine lean',
+      angle: spineAngle ?? 0,
+      idealRange: '0° - 18° from upright',
+      status: (spineAngle != null && spineAngle <= 18 ? 'CORRECT' : 'INCORRECT') as 'CORRECT' | 'INCORRECT',
+      recommendation: 'Shoulders should stay stacked over the hips.',
     },
   ];
 
@@ -194,13 +194,30 @@ export const VideoAnalysisScreen: React.FC<VideoAnalysisScreenProps> = ({
     setViewMode('comparison');
   };
 
+  if (isLoading && !report) {
+    return (
+      <View style={styles.analyzingOnly}>
+        <TouchableOpacity
+          style={[styles.backButton, styles.analyzingBack]}
+          onPress={onBackToCamera}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.backButtonText}>← Record again</Text>
+        </TouchableOpacity>
+        <ActivityIndicator size="large" color="#0284c7" />
+        <Text style={styles.loadingTitle}>Analyzing your shot</Text>
+        <Text style={styles.loadingSub}>Wait here, or go back and record another shot.</Text>
+      </View>
+    );
+  }
+
   // Show summary view for multi-shot sessions
   if (viewMode === 'summary' && shots.length > 1) {
     return (
       <View style={styles.container}>
         <View style={styles.headerBar}>
           <TouchableOpacity style={styles.backButton} onPress={onBackToCamera}>
-            <Text style={styles.backButtonText}>← CAMERA</Text>
+            <Text style={styles.backButtonText}>← Record again</Text>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>SESSION ANALYSIS</Text>
           <View style={{ width: 100 }} />
@@ -226,8 +243,6 @@ export const VideoAnalysisScreen: React.FC<VideoAnalysisScreenProps> = ({
     );
   }
 
-  const [activeTab, setActiveTab] = useState<'verdict' | 'metrics' | 'stadium' | 'masterclass'>('verdict');
-
   // Detail view (single shot or selected shot from multi-shot session)
   return (
     <View style={styles.container}>
@@ -240,12 +255,12 @@ export const VideoAnalysisScreen: React.FC<VideoAnalysisScreenProps> = ({
             activeOpacity={0.7}
           >
             <Text style={styles.backButtonText}>
-              {shots.length > 1 ? '← SUMMARY' : '← RECORD AGAIN'}
+              {shots.length > 1 ? '← Summary' : '← Record again'}
             </Text>
           </TouchableOpacity>
           <View style={styles.headerTitleGroup}>
             <Text style={styles.headerTitle}>
-              {shots.length > 1 ? `SHOT ${selectedShotIndex + 1} OF ${shots.length}` : 'AI SHOT AUDIT'}
+              {shots.length > 1 ? `Shot ${selectedShotIndex + 1} of ${shots.length}` : 'Shot audit'}
             </Text>
             <Text style={styles.headerSubtitle}>{shotType}</Text>
           </View>
@@ -277,7 +292,7 @@ export const VideoAnalysisScreen: React.FC<VideoAnalysisScreenProps> = ({
                 >
                   <View style={[styles.shotPillDot, { backgroundColor: dotColor }]} />
                   <Text style={[styles.shotPillText, isActive && styles.shotPillTextActive]}>
-                    DELIVERY {idx + 1}
+                    Delivery {idx + 1}
                   </Text>
                 </TouchableOpacity>
               );
@@ -286,32 +301,51 @@ export const VideoAnalysisScreen: React.FC<VideoAnalysisScreenProps> = ({
         )}
 
         {/* 🚀 Broadcast-Grade In-Video Player with HUD, Angle Tags & Phase Scrubber */}
-        <BroadcastInVideoPlayer
-          videoUri={processedVideoUrl}
-          isLoading={isLoading}
+        {!isFullscreen ? (
+          <BroadcastInVideoPlayer
+            videoUri={processedVideoUrl}
+            isLoading={isLoading}
+            leadElbowAngle={leftElbowAngle}
+            kneeFlexionAngle={leftKneeAngle}
+            rearKneeAngle={rightKneeAngle}
+            spineAngle={spineAngle}
+            shotType={shotType}
+            impactFrameRatio={calculatedImpactRatio}
+            timeSeriesAngles={timeSeries}
+            landmarkPositions={report?.report_json?.landmark_positions}
+            coachingTip={coachingCue?.cue || coachingCue?.bottom || coachingCue?.bubble}
+            onToggleFullscreen={() => setIsFullscreen(true)}
+            isFullscreen={false}
+            resumePlayback={playbackSnapshot}
+            onPlaybackSnapshot={setPlaybackSnapshot}
+            coachCuesEnabled={coachCuesEnabled}
+            onCoachCuesChange={setCoachCuesEnabled}
+          />
+        ) : (
+          <View style={styles.fullscreenPlaceholder}>
+            <Text style={styles.fullscreenPlaceholderText}>Playing in expand mode…</Text>
+          </View>
+        )}
+
+        <StanceBalanceCard
+          shotType={shotType}
           leadElbowAngle={leftElbowAngle}
           kneeFlexionAngle={leftKneeAngle}
           rearKneeAngle={rightKneeAngle}
           spineAngle={spineAngle}
-          exitVelocityKmh={dynamicExitVelocity}
-          sweetSpotRatio={dynamicSweetSpot}
-          headOffsetRatio={0.08}
-          shotType={shotType}
-          impactFrameRatio={calculatedImpactRatio}
-          timeSeriesAngles={timeSeries}
-          onToggleFullscreen={() => setIsFullscreen(true)}
-          isFullscreen={false}
+          coachingCue={coachingCue}
         />
 
         {/* 🌟 3-Second High-Level Executive Coach Takeaway Card for Clients */}
         <ExecutiveCoachSummaryCard
-          score={activeShotVerdict?.composite_score ?? (typeof overallScore === 'number' ? Math.round(overallScore) : 70)}
+          score={activeShotVerdict?.composite_score ?? (typeof overallScore === 'number' ? Math.round(overallScore) : undefined)}
           shotType={shotType}
-          shotDirectionLabel={activeShotVerdict?.shot_direction_label ?? 'COVER'}
-          shotDirectionDeg={activeShotVerdict?.shot_direction_deg ?? 50}
+          shotDirectionLabel={activeShotVerdict?.shot_direction_label}
+          shotDirectionDeg={activeShotVerdict?.shot_direction_deg}
           leadElbowAngle={leftElbowAngle}
           kneeFlexionAngle={leftKneeAngle}
-          verdict={activeShotVerdict?.verdict ?? 'GOOD_SHOT'}
+          verdict={activeShotVerdict?.verdict}
+          takeaway={coachingCue?.bottom || flawSummary}
           onOpenScorecard={() => setShowScorecardModal(true)}
         />
 
@@ -355,29 +389,28 @@ export const VideoAnalysisScreen: React.FC<VideoAnalysisScreenProps> = ({
               kneeFlexionAngle={leftKneeAngle}
               rearKneeAngle={rightKneeAngle}
               spineAngle={spineAngle}
-              headOffsetRatio={0.08}
-              overallScore={typeof overallScore === 'number' ? Math.round(overallScore) : 88}
+              headOffsetRatio={coachingCue?.head_over_foot_ok === false ? 0.2 : 0.06}
+              overallScore={typeof overallScore === 'number' ? Math.round(overallScore) : undefined}
             />
 
             {/* AI Coach Broadcast Audio Commentary Player */}
             <AICoachVoicePlayer
               score={activeShotVerdict?.composite_score ?? (typeof overallScore === 'number' ? Math.round(overallScore) : 70)}
               techniqueScore={activeShotVerdict?.technique_score ?? 63}
-              executionScore={activeShotVerdict?.execution_score ?? 91}
+              executionScore={activeShotVerdict?.execution_score}
               shotType={shotType}
               verdictLabel={activeShotVerdict?.verdict || 'GOOD SHOT'}
               leadElbowAngle={leftElbowAngle}
               kneeFlexionAngle={leftKneeAngle}
-              shotDirectionLabel={activeShotVerdict?.shot_direction_label ?? 'COVER'}
-              reason={activeShotVerdict?.reason}
+              reason={coachingCue?.bottom || activeShotVerdict?.reason}
             />
 
             {/* Hawk-Eye Biomechanical Telemetry Gauges */}
             <BroadcastTelemetryGauges
               leadElbowAngle={leftElbowAngle}
               kneeFlexionAngle={leftKneeAngle}
-              overallScore={typeof overallScore === 'number' ? overallScore : 88}
-              headOffsetRatio={0.08}
+              overallScore={typeof overallScore === 'number' ? overallScore : undefined}
+              headOffsetRatio={coachingCue?.head_over_foot_ok === false ? 0.2 : 0.06}
             />
 
             {/* Joint Measurement & Posture Analysis Metrics Card */}
@@ -398,9 +431,6 @@ export const VideoAnalysisScreen: React.FC<VideoAnalysisScreenProps> = ({
           <View style={styles.tabContentSection}>
             {/* ⚡ 1. 3D Bat Face Sweet-Spot Thermal Heatmap & Exit Velocity */}
             <BatImpactHeatmapView
-              sweetSpotRatio={0.94}
-              exitVelocityKmh={118}
-              shotDistanceMeters={74}
               shotType={shotType}
             />
 
@@ -417,15 +447,7 @@ export const VideoAnalysisScreen: React.FC<VideoAnalysisScreenProps> = ({
               shotType={shotType}
               leadElbowAngle={leftElbowAngle}
               kneeFlexionAngle={leftKneeAngle}
-              isHeadStacked={true}
-            />
-
-            {/* 👑 Pro Ghost Model Posture Comparison */}
-            <ProGhostSideBySideCard
-              shotType={shotType}
-              leadElbowAngle={leftElbowAngle}
-              kneeFlexionAngle={leftKneeAngle}
-              overallScore={typeof overallScore === 'number' ? Math.round(overallScore) : 88}
+              isHeadStacked={coachingCue?.head_over_foot_ok !== false}
             />
           </View>
         )}
@@ -436,14 +458,14 @@ export const VideoAnalysisScreen: React.FC<VideoAnalysisScreenProps> = ({
             {/* 🏟️ 360° Virtual Stadium Perspective & Multi-Camera Simulator */}
             <Stadium360AngleViewer
               shotType={shotType}
-              shotDirectionLabel={activeShotVerdict?.shot_direction_label ?? 'COVER'}
-              shotDirectionDeg={activeShotVerdict?.shot_direction_deg ?? 50}
+              shotDirectionLabel={activeShotVerdict?.shot_direction_label}
+              shotDirectionDeg={activeShotVerdict?.shot_direction_deg}
             />
 
             {/* 360° Interactive Stadium Wagon-Wheel Radar */}
             <WagonWheelFieldView
-              shotDirectionDeg={activeShotVerdict?.shot_direction_deg ?? 50}
-              shotDirectionLabel={activeShotVerdict?.shot_direction_label ?? 'COVER'}
+              shotDirectionDeg={activeShotVerdict?.shot_direction_deg}
+              shotDirectionLabel={activeShotVerdict?.shot_direction_label}
               shotType={shotType}
             />
           </View>
@@ -452,6 +474,23 @@ export const VideoAnalysisScreen: React.FC<VideoAnalysisScreenProps> = ({
         {/* TAB CONTENT: 📖 4. COACHCRICXI MASTERCLASS & DRILLS */}
         {activeTab === 'masterclass' && (
           <View style={styles.tabContentSection}>
+            <DualVideoMasterclassView
+              playerVideoUri={processedVideoUrl}
+              shotType={shotType}
+              leadElbowAngle={leftElbowAngle}
+              kneeFlexionAngle={leftKneeAngle}
+              spineAngle={spineAngle}
+              overallScore={typeof overallScore === 'number' ? Math.round(overallScore) : undefined}
+            />
+
+            <ProGhostSideBySideCard
+              shotType={shotType}
+              leadElbowAngle={leftElbowAngle}
+              kneeFlexionAngle={leftKneeAngle}
+              spineAngle={spineAngle}
+              overallScore={typeof overallScore === 'number' ? Math.round(overallScore) : 88}
+            />
+
             {/* 📖 CoachCricXI / CricketGraph Visual Technique Blueprint Guide */}
             <ShotMasterclassGuideCard
               shotType={shotType}
@@ -460,12 +499,6 @@ export const VideoAnalysisScreen: React.FC<VideoAnalysisScreenProps> = ({
             {/* 4-Phase Stroke Scrubber & Masterclass Checklist */}
             <PhaseTimelineScrubber
               activePhase="IMPACT"
-            />
-
-            {/* Broadcast Dual-Video Masterclass Split-Screen Replay */}
-            <DualVideoMasterclassView
-              playerVideoUri={processedVideoUrl}
-              shotType={shotType}
             />
           </View>
         )}
@@ -478,8 +511,8 @@ export const VideoAnalysisScreen: React.FC<VideoAnalysisScreenProps> = ({
         >
           <Text style={styles.exportBtnIcon}>📜</Text>
           <View style={styles.exportBtnTextGroup}>
-            <Text style={styles.exportBtnTitle}>GENERATE OFFICIAL MATCH SCORECARD</Text>
-            <Text style={styles.exportBtnSubtitle}>Export high-res PDF certificate with biomechanical radar</Text>
+            <Text style={styles.exportBtnTitle}>Export scorecard</Text>
+            <Text style={styles.exportBtnSubtitle}>Shareable match certificate with key metrics</Text>
           </View>
           <Text style={styles.exportBtnArrow}>➔</Text>
         </TouchableOpacity>
@@ -488,7 +521,7 @@ export const VideoAnalysisScreen: React.FC<VideoAnalysisScreenProps> = ({
       </ScrollView>
 
       {/* Fullscreen Video Overlay Modal */}
-      <Modal visible={isFullscreen} animationType="fade" statusBarTranslucent>
+      <Modal visible={isFullscreen} animationType="fade" statusBarTranslucent onRequestClose={() => setIsFullscreen(false)}>
         <View style={styles.fullscreenContainer}>
           <BroadcastInVideoPlayer
             videoUri={processedVideoUrl}
@@ -497,14 +530,17 @@ export const VideoAnalysisScreen: React.FC<VideoAnalysisScreenProps> = ({
             kneeFlexionAngle={leftKneeAngle}
             rearKneeAngle={rightKneeAngle}
             spineAngle={spineAngle}
-            exitVelocityKmh={dynamicExitVelocity}
-            sweetSpotRatio={dynamicSweetSpot}
-            headOffsetRatio={0.08}
             shotType={shotType}
             impactFrameRatio={calculatedImpactRatio}
             timeSeriesAngles={timeSeries}
+            landmarkPositions={report?.report_json?.landmark_positions}
+            coachingTip={coachingCue?.cue || coachingCue?.bottom || coachingCue?.bubble}
             onToggleFullscreen={() => setIsFullscreen(false)}
             isFullscreen={true}
+            resumePlayback={playbackSnapshot}
+            onPlaybackSnapshot={setPlaybackSnapshot}
+            coachCuesEnabled={coachCuesEnabled}
+            onCoachCuesChange={setCoachCuesEnabled}
           />
         </View>
       </Modal>
@@ -515,8 +551,8 @@ export const VideoAnalysisScreen: React.FC<VideoAnalysisScreenProps> = ({
         onClose={() => setShowScorecardModal(false)}
         score={typeof overallScore === 'number' ? Math.round(overallScore) : 88}
         shotType={shotType}
-        shotDirectionLabel={activeShotVerdict?.shot_direction_label ?? 'COVER'}
-        shotDirectionDeg={activeShotVerdict?.shot_direction_deg ?? 50}
+        shotDirectionLabel={activeShotVerdict?.shot_direction_label}
+        shotDirectionDeg={activeShotVerdict?.shot_direction_deg}
         leadElbowAngle={leftElbowAngle}
         kneeFlexionAngle={leftKneeAngle}
       />
@@ -540,6 +576,19 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8fafc',
   },
+  analyzingOnly: {
+    flex: 1,
+    backgroundColor: '#f8fafc',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 28,
+    gap: 10,
+  },
+  analyzingBack: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+  },
   exportScorecardBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -559,21 +608,22 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   exportBtnTitle: {
-    color: '#0284c7',
-    fontSize: 11.5,
-    fontWeight: '900',
-    letterSpacing: 0.5,
+    color: '#0c4a6e',
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: 0.1,
   },
   exportBtnSubtitle: {
     color: '#64748b',
-    fontSize: 10,
-    fontWeight: '600',
-    marginTop: 2,
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 3,
+    lineHeight: 16,
   },
   exportBtnArrow: {
     color: '#0284c7',
-    fontSize: 16,
-    fontWeight: '900',
+    fontSize: 18,
+    fontWeight: '700',
   },
   contentContainer: {
     padding: 18,
@@ -598,9 +648,10 @@ const styles = StyleSheet.create({
   },
   multiShotBadgeText: {
     flex: 1,
-    fontSize: 12.5,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '600',
     color: '#15803d',
+    lineHeight: 18,
   },
   headerBar: {
     flexDirection: 'row',
@@ -611,16 +662,16 @@ const styles = StyleSheet.create({
   backButton: {
     backgroundColor: '#ffffff',
     paddingHorizontal: 12,
-    paddingVertical: 7,
+    paddingVertical: 8,
     borderRadius: 999,
     borderWidth: 1,
     borderColor: '#e2e8f0',
     ...cardShadow,
   },
   backButtonText: {
-    color: '#0284c7',
-    fontSize: 10.5,
-    fontWeight: '700',
+    color: '#0369a1',
+    fontSize: 12,
+    fontWeight: '600',
   },
   headerTitleGroup: {
     flex: 1,
@@ -629,15 +680,14 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     color: '#0f172a',
-    fontSize: 13,
-    fontWeight: '900',
-    letterSpacing: 0.8,
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
   headerSubtitle: {
     color: '#0284c7',
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.5,
+    fontSize: 12,
+    fontWeight: '600',
     marginTop: 2,
   },
   exportHeaderBtn: {
@@ -684,13 +734,13 @@ const styles = StyleSheet.create({
   },
   tabButtonText: {
     color: '#64748b',
-    fontSize: 9,
-    fontWeight: '700',
+    fontSize: 11,
+    fontWeight: '600',
     textAlign: 'center',
   },
   tabButtonTextActive: {
     color: '#0284c7',
-    fontWeight: '900',
+    fontWeight: '700',
   },
   tabContentSection: {
     gap: 12,
@@ -845,7 +895,22 @@ const styles = StyleSheet.create({
   fullscreenContainer: {
     flex: 1,
     backgroundColor: '#020617',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
+  },
+  fullscreenPlaceholder: {
+    height: 280,
+    borderRadius: 20,
+    backgroundColor: '#0f172a',
+    borderWidth: 1,
+    borderColor: '#334155',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  fullscreenPlaceholderText: {
+    color: '#64748b',
+    fontSize: 13,
+    fontWeight: '600',
   },
   fullscreenHeader: {
     flexDirection: 'row',

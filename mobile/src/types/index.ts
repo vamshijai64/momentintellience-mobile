@@ -67,6 +67,16 @@ export interface AnalysisReport {
     shot_classification?: ShotClassification;
     shot_verdict?: ShotVerdict;
     shots?: ShotVerdict[];
+    coaching_cue?: {
+      ok?: boolean;
+      cue?: string;
+      bottom?: string;
+      bubble?: string;
+      head_still_ok?: boolean;
+      head_over_foot_ok?: boolean;
+      knee_ok?: boolean;
+      balance_ok?: boolean;
+    };
     time_series_angles?: any[];
     landmark_positions?: any[];
     observations: string[];

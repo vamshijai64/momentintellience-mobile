@@ -10,25 +10,28 @@ interface ExecutiveCoachSummaryCardProps {
   leadElbowAngle?: number;
   kneeFlexionAngle?: number;
   verdict?: string;
+  takeaway?: string;
   onOpenScorecard?: () => void;
 }
 
 export const ExecutiveCoachSummaryCard: React.FC<ExecutiveCoachSummaryCardProps> = ({
-  score = 70,
-  shotType = 'CRICKET STROKE',
-  shotDirectionLabel = 'COVER',
-  shotDirectionDeg = 47,
-  leadElbowAngle = 138,
-  kneeFlexionAngle = 132,
-  verdict = 'GOOD SHOT',
+  score,
+  shotType = 'Your shot',
+  shotDirectionLabel,
+  shotDirectionDeg,
+  leadElbowAngle,
+  kneeFlexionAngle,
+  verdict,
+  takeaway,
   onOpenScorecard,
 }) => {
-  const isGood = score >= 68;
-  const outcomeText = isGood ? 'Boundary (4 Runs)' : 'Grounded Drive (1-2 Runs)';
-  const elbowDiff = Math.abs(144 - Math.round(leadElbowAngle));
-  const elbowTip = leadElbowAngle >= 140 
-    ? 'Lead elbow locked high with perfect extension through the stroke.' 
-    : `Elevate front elbow +${elbowDiff}° during downswing to optimize sweet-spot exit speed.`;
+  const hasScore = typeof score === 'number';
+  const isGood = hasScore ? score >= 68 : true;
+  const verdictText = (verdict || (isGood ? 'GOOD SHOT' : 'NEEDS WORK')).replace(/_/g, ' ');
+  const directionText = shotDirectionLabel
+    ? `${shotDirectionLabel}${typeof shotDirectionDeg === 'number' ? ` (${Math.round(shotDirectionDeg)}°)` : ''}`
+    : 'Direction not measured';
+  const insight = takeaway || 'Play the video. The line and bubble on the body are the analysis.';
 
   return (
     <View style={styles.card}>
@@ -36,11 +39,11 @@ export const ExecutiveCoachSummaryCard: React.FC<ExecutiveCoachSummaryCardProps>
       <View style={styles.headerRow}>
         <View style={styles.headerLeft}>
           <View style={styles.aiDot} />
-          <Text style={styles.headerCategory}>COACH VERDICT</Text>
+          <Text style={styles.headerCategory}>Coach verdict</Text>
         </View>
         <View style={[styles.verdictBadge, isGood ? styles.verdictGood : styles.verdictNeedsWork]}>
           <Text style={[styles.verdictText, isGood ? styles.verdictGoodText : styles.verdictNeedsWorkText]}>
-            {verdict.replace(/_/g, ' ')} {isGood ? '✓' : '⚠️'}
+            {verdictText} {isGood ? '✓' : ''}
           </Text>
         </View>
       </View>
@@ -51,11 +54,11 @@ export const ExecutiveCoachSummaryCard: React.FC<ExecutiveCoachSummaryCardProps>
         <View style={styles.scoreRingWrapper}>
           <View style={[styles.scoreRingOuter, isGood ? styles.scoreRingGood : styles.scoreRingAmber]}>
             <Text style={[styles.scoreNumber, isGood ? styles.textGood : styles.textAmber]}>
-              {Math.round(score)}
+              {hasScore ? Math.round(score as number) : '—'}
             </Text>
             <Text style={styles.scoreScale}>/ 100</Text>
           </View>
-          <Text style={styles.scoreLabel}>FORM MATCH</Text>
+          <Text style={styles.scoreLabel}>Form match</Text>
         </View>
 
         {/* Shot Details Column */}
@@ -64,11 +67,11 @@ export const ExecutiveCoachSummaryCard: React.FC<ExecutiveCoachSummaryCardProps>
           <View style={styles.pillRow}>
             <View style={styles.infoPill}>
               <TargetIcon size={12} color="#0284c7" />
-              <Text style={styles.infoPillText}>{outcomeText}</Text>
+              <Text style={styles.infoPillText}>{verdictText}</Text>
             </View>
             <View style={styles.infoPill}>
               <CompassArenaIcon size={12} color="#0284c7" />
-              <Text style={styles.infoPillText}>{shotDirectionLabel} ({Math.round(shotDirectionDeg)}°)</Text>
+              <Text style={styles.infoPillText}>{directionText}</Text>
             </View>
           </View>
         </View>
@@ -78,23 +81,23 @@ export const ExecutiveCoachSummaryCard: React.FC<ExecutiveCoachSummaryCardProps>
       <View style={styles.coachInsightBox}>
         <View style={styles.takeawayHeaderRow}>
           <LightbulbCueIcon size={14} color="#0284c7" />
-          <Text style={styles.coachInsightLabel}>AI COACH TAKEAWAY</Text>
+          <Text style={styles.coachInsightLabel}>Coach takeaway</Text>
         </View>
-        <Text style={styles.coachInsightText}>{elbowTip}</Text>
+        <Text style={styles.coachInsightText}>{insight}</Text>
       </View>
 
       {/* 2 Fast Telemetry Metric Pills */}
       <View style={styles.metricsGrid}>
         <View style={styles.metricCard}>
-          <Text style={styles.metricCardLabel}>LEAD ELBOW</Text>
-          <Text style={styles.metricCardValue}>{Math.round(leadElbowAngle)}°</Text>
-          <Text style={styles.metricCardSub}>Target: 144° (98% Ideal)</Text>
+          <Text style={styles.metricCardLabel}>Lead elbow</Text>
+          <Text style={styles.metricCardValue}>{leadElbowAngle != null ? `${Math.round(leadElbowAngle)}°` : '—'}</Text>
+          <Text style={styles.metricCardSub}>At impact</Text>
         </View>
 
         <View style={styles.metricCard}>
-          <Text style={styles.metricCardLabel}>POWER TRANSFER</Text>
-          <Text style={styles.metricCardValue}>94%</Text>
-          <Text style={styles.metricCardSub}>Exit Speed: 118 KM/H</Text>
+          <Text style={styles.metricCardLabel}>Front knee</Text>
+          <Text style={styles.metricCardValue}>{kneeFlexionAngle != null ? `${Math.round(kneeFlexionAngle)}°` : '—'}</Text>
+          <Text style={styles.metricCardSub}>At impact</Text>
         </View>
       </View>
     </View>
@@ -133,13 +136,13 @@ const styles = StyleSheet.create({
   },
   headerCategory: {
     color: '#64748b',
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.8,
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 0.2,
   },
   verdictBadge: {
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 5,
     borderRadius: 999,
   },
   verdictGood: {
@@ -153,9 +156,8 @@ const styles = StyleSheet.create({
     borderColor: '#fde68a',
   },
   verdictText: {
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.4,
+    fontSize: 11,
+    fontWeight: '700',
   },
   verdictGoodText: {
     color: '#15803d',
@@ -189,7 +191,7 @@ const styles = StyleSheet.create({
   },
   scoreNumber: {
     fontSize: 22,
-    fontWeight: '900',
+    fontWeight: '800',
     lineHeight: 24,
   },
   textGood: {
@@ -200,14 +202,13 @@ const styles = StyleSheet.create({
   },
   scoreScale: {
     color: '#94a3b8',
-    fontSize: 9,
-    fontWeight: '700',
+    fontSize: 10,
+    fontWeight: '600',
   },
   scoreLabel: {
     color: '#64748b',
-    fontSize: 8.5,
-    fontWeight: '800',
-    letterSpacing: 0.5,
+    fontSize: 11,
+    fontWeight: '600',
     marginTop: 4,
   },
   detailsCol: {
@@ -216,9 +217,8 @@ const styles = StyleSheet.create({
   },
   shotTitle: {
     color: '#0f172a',
-    fontSize: 16,
-    fontWeight: '800',
-    letterSpacing: 0.3,
+    fontSize: 17,
+    fontWeight: '700',
     marginBottom: 6,
   },
   pillRow: {
@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
     gap: 5,
     backgroundColor: '#f1f5f9',
     paddingHorizontal: 8,
-    paddingVertical: 3.5,
+    paddingVertical: 4,
     borderRadius: 6,
     alignSelf: 'flex-start',
     borderWidth: 1,
@@ -239,8 +239,8 @@ const styles = StyleSheet.create({
   },
   infoPillText: {
     color: '#334155',
-    fontSize: 10.5,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '500',
   },
   coachInsightBox: {
     backgroundColor: '#f0f9ff',
@@ -258,15 +258,14 @@ const styles = StyleSheet.create({
   },
   coachInsightLabel: {
     color: '#0284c7',
-    fontSize: 9.5,
-    fontWeight: '800',
-    letterSpacing: 0.6,
+    fontSize: 12,
+    fontWeight: '600',
   },
   coachInsightText: {
-    color: '#0369a1',
-    fontSize: 11.5,
-    lineHeight: 16,
-    fontWeight: '600',
+    color: '#0c4a6e',
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '500',
   },
   metricsGrid: {
     flexDirection: 'row',
@@ -276,26 +275,25 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8fafc',
     borderRadius: 12,
-    padding: 10,
+    padding: 12,
     borderWidth: 1,
     borderColor: '#e2e8f0',
   },
   metricCardLabel: {
     color: '#64748b',
-    fontSize: 8.5,
-    fontWeight: '800',
-    letterSpacing: 0.5,
+    fontSize: 12,
+    fontWeight: '500',
   },
   metricCardValue: {
     color: '#0f172a',
-    fontSize: 15,
-    fontWeight: '900',
-    marginTop: 2,
+    fontSize: 18,
+    fontWeight: '700',
+    marginTop: 3,
   },
   metricCardSub: {
     color: '#64748b',
-    fontSize: 9,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '500',
     marginTop: 2,
   },
 });

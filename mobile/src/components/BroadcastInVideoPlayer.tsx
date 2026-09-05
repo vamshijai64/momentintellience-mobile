@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -8,11 +8,23 @@ import {
   Dimensions,
   Platform,
   Animated,
+  StatusBar,
 } from 'react-native';
 import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
 import { ProGhostVideoOverlay } from './ProGhostVideoOverlay';
+import {
+  CoachingCalloutOverlay,
+  extractBodyAnchors,
+  BodyAnchors,
+} from './CoachingCalloutOverlay';
 
 export type StrokePhase = 'STANCE' | 'BACKLIFT' | 'IMPACT' | 'FINISH';
+
+export type PlayerPlaybackSnapshot = {
+  positionMillis: number;
+  isPlaying: boolean;
+  playbackSpeed: number;
+};
 
 export interface BroadcastInVideoPlayerProps {
   videoUri?: string;
@@ -27,11 +39,20 @@ export interface BroadcastInVideoPlayerProps {
   shotType?: string;
   impactFrameRatio?: number;
   timeSeriesAngles?: any[];
+  landmarkPositions?: any[];
+  coachingTip?: string;
   onToggleFullscreen?: () => void;
   isFullscreen?: boolean;
+  /** Restore time/play state after Expand remounts the player. */
+  resumePlayback?: PlayerPlaybackSnapshot | null;
+  onPlaybackSnapshot?: (snapshot: PlayerPlaybackSnapshot) => void;
+  coachCuesEnabled?: boolean;
+  onCoachCuesChange?: (enabled: boolean) => void;
 }
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const ANDROID_STATUS_TOP = StatusBar.currentHeight ?? 24;
+const FULLSCREEN_BOTTOM_INSET = Platform.OS === 'ios' ? 28 : 16;
 
 export const BroadcastInVideoPlayer: React.FC<BroadcastInVideoPlayerProps> = ({
   videoUri,
@@ -46,25 +67,44 @@ export const BroadcastInVideoPlayer: React.FC<BroadcastInVideoPlayerProps> = ({
   shotType = 'COVER DRIVE',
   impactFrameRatio = 0.62,
   timeSeriesAngles = [],
+  landmarkPositions,
+  coachingTip,
   onToggleFullscreen,
   isFullscreen = false,
+  resumePlayback = null,
+  onPlaybackSnapshot,
+  coachCuesEnabled,
+  onCoachCuesChange,
 }) => {
   const videoRef = useRef<Video>(null);
-  const [isPlaying, setIsPlaying] = useState<boolean>(true);
-  const [playbackSpeed, setPlaybackSpeed] = useState<number>(0.5);
-  const [positionMillis, setPositionMillis] = useState<number>(0);
+  const didResumeRef = useRef(false);
+  const trackWidthRef = useRef(SCREEN_WIDTH - 64);
+  const [isPlaying, setIsPlaying] = useState<boolean>(resumePlayback?.isPlaying ?? true);
+  const [playbackSpeed, setPlaybackSpeed] = useState<number>(resumePlayback?.playbackSpeed ?? 0.5);
+  const [positionMillis, setPositionMillis] = useState<number>(resumePlayback?.positionMillis ?? 0);
   const [durationMillis, setDurationMillis] = useState<number>(1);
   const [showHudOverlays, setShowHudOverlays] = useState<boolean>(false);
   const [showAngleTags, setShowAngleTags] = useState<boolean>(false);
   const [showGhostOverlay, setShowGhostOverlay] = useState<boolean>(false);
   const [ghostOpacity, setGhostOpacity] = useState<number>(0.65);
   const [showTelemetryCard, setShowTelemetryCard] = useState<boolean>(false);
-  const [activePhase, setActivePhase] = useState<StrokePhase>('IMPACT');
+  const [internalCoachCues, setInternalCoachCues] = useState<boolean>(false);
+  const showCoachCues = coachCuesEnabled ?? internalCoachCues;
+  const setShowCoachCues = (next: boolean) => {
+    if (onCoachCuesChange) onCoachCuesChange(next);
+    else setInternalCoachCues(next);
+  };
+  const [activePhase, setActivePhase] = useState<StrokePhase | null>(null);
+  const [videoAspect, setVideoAspect] = useState<number>(9 / 16);
 
   // Pulse animation for live badge
   const pulseAnim = useRef(new Animated.Value(0.4)).current;
   // Impact moment flash animation
   const flashAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    didResumeRef.current = false;
+  }, [videoUri, isFullscreen]);
 
   useEffect(() => {
     Animated.loop(
@@ -83,21 +123,26 @@ export const BroadcastInVideoPlayer: React.FC<BroadcastInVideoPlayerProps> = ({
     ).start();
   }, [pulseAnim]);
 
-  // Determine active phase based on current playback progress ratio
   const progressRatio = durationMillis > 0 ? positionMillis / durationMillis : 0;
 
-  useEffect(() => {
-    if (progressRatio < 0.25) {
-      setActivePhase('STANCE');
-    } else if (progressRatio < 0.58) {
-      setActivePhase('BACKLIFT');
-    } else if (progressRatio < 0.78) {
-      setActivePhase('IMPACT');
-    } else {
-      setActivePhase('FINISH');
-    }
+  const playbackPhase: StrokePhase = useMemo(() => {
+    if (Math.abs(progressRatio - impactFrameRatio) < 0.07) return 'IMPACT';
+    if (progressRatio < 0.28) return 'STANCE';
+    if (progressRatio < Math.max(0.38, impactFrameRatio - 0.08)) return 'BACKLIFT';
+    if (progressRatio < impactFrameRatio + 0.1) return 'IMPACT';
+    return 'FINISH';
+  }, [progressRatio, impactFrameRatio]);
 
-    // Trigger subtle impact flash when entering impact zone
+  const cuePhase = activePhase || playbackPhase;
+
+  const liveAnchors: BodyAnchors | undefined = useMemo(() => {
+    // Prefer dedicated landmark frames; fall back to any landmark blobs inside time-series.
+    const fromLandmarks = extractBodyAnchors(landmarkPositions, progressRatio);
+    if (fromLandmarks) return fromLandmarks;
+    return extractBodyAnchors(timeSeriesAngles, progressRatio);
+  }, [landmarkPositions, timeSeriesAngles, progressRatio]);
+
+  useEffect(() => {
     if (Math.abs(progressRatio - impactFrameRatio) < 0.04) {
       Animated.sequence([
         Animated.timing(flashAnim, { toValue: 0.45, duration: 100, useNativeDriver: true }),
@@ -106,12 +151,38 @@ export const BroadcastInVideoPlayer: React.FC<BroadcastInVideoPlayerProps> = ({
     }
   }, [progressRatio, impactFrameRatio, flashAnim]);
 
-  const handlePlaybackStatusUpdate = (status: AVPlaybackStatus) => {
-    if (status.isLoaded) {
-      setPositionMillis(status.positionMillis || 0);
-      setDurationMillis(status.durationMillis || 1);
-      setIsPlaying(status.isPlaying);
+  const handlePlaybackStatusUpdate = async (status: AVPlaybackStatus) => {
+    if (!status.isLoaded) return;
+
+    // After Expand remounts the Video, seek once to the saved timestamp.
+    if (!didResumeRef.current && resumePlayback && resumePlayback.positionMillis > 0) {
+      didResumeRef.current = true;
+      const speed = resumePlayback.playbackSpeed || playbackSpeed;
+      try {
+        await videoRef.current?.setStatusAsync({
+          positionMillis: Math.floor(resumePlayback.positionMillis),
+          shouldPlay: resumePlayback.isPlaying,
+          rate: speed,
+        });
+        setPlaybackSpeed(speed);
+        setIsPlaying(resumePlayback.isPlaying);
+        setPositionMillis(resumePlayback.positionMillis);
+      } catch {
+        didResumeRef.current = false;
+      }
+      return;
     }
+
+    const nextPos = status.positionMillis || 0;
+    const nextPlaying = status.isPlaying;
+    setPositionMillis(nextPos);
+    setDurationMillis(status.durationMillis || 1);
+    setIsPlaying(nextPlaying);
+    onPlaybackSnapshot?.({
+      positionMillis: nextPos,
+      isPlaying: nextPlaying,
+      playbackSpeed,
+    });
   };
 
   const togglePlayPause = async () => {
@@ -128,6 +199,11 @@ export const BroadcastInVideoPlayer: React.FC<BroadcastInVideoPlayerProps> = ({
     if (videoRef.current) {
       await videoRef.current.setRateAsync(speed, true);
     }
+    onPlaybackSnapshot?.({
+      positionMillis,
+      isPlaying,
+      playbackSpeed: speed,
+    });
   };
 
   const stepFrame = async (deltaMs: number) => {
@@ -158,12 +234,14 @@ export const BroadcastInVideoPlayer: React.FC<BroadcastInVideoPlayerProps> = ({
   const handleProgressBarPress = async (evt: any) => {
     if (!videoRef.current || durationMillis <= 0) return;
     const { locationX } = evt.nativeEvent;
-    const barWidth = isFullscreen ? SCREEN_WIDTH - 48 : SCREEN_WIDTH - 64;
+    const barWidth = Math.max(1, trackWidthRef.current);
     const ratio = Math.max(0, Math.min(1, locationX / barWidth));
     const targetMillis = Math.floor(durationMillis * ratio);
     await videoRef.current.setStatusAsync({
       positionMillis: targetMillis,
     });
+    setPositionMillis(targetMillis);
+    setActivePhase(null);
   };
 
   const formatTime = (millis: number) => {
@@ -207,14 +285,20 @@ export const BroadcastInVideoPlayer: React.FC<BroadcastInVideoPlayerProps> = ({
   const rearKneeColor = getStatusColor(liveRearKnee, 125, 165);
 
   return (
-    <View style={[styles.container, isFullscreen && styles.fullscreenContainer]}>
+    <View
+      style={[
+        styles.container,
+        isFullscreen && styles.fullscreenContainer,
+        isFullscreen && { paddingBottom: FULLSCREEN_BOTTOM_INSET },
+      ]}
+    >
       {/* 📹 Main Video Viewport */}
       <View style={[styles.videoViewport, isFullscreen && styles.fullscreenViewport]}>
         {isLoading ? (
           <View style={styles.loadingBox}>
             <ActivityIndicator size="large" color="#38bdf8" />
-            <Text style={styles.loadingTitle}>Processing Skeletal Telemetry...</Text>
-            <Text style={styles.loadingSub}>Synthesizing 33 3D joints & downswing trajectory</Text>
+            <Text style={styles.loadingTitle}>Analyzing shot…</Text>
+            <Text style={styles.loadingSub}>Building joint tracking and coaching cues</Text>
           </View>
         ) : videoUri ? (
           <>
@@ -227,6 +311,12 @@ export const BroadcastInVideoPlayer: React.FC<BroadcastInVideoPlayerProps> = ({
               shouldPlay={isPlaying}
               rate={playbackSpeed}
               onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
+              onReadyForDisplay={(event) => {
+                const nat = (event as any)?.naturalSize;
+                if (nat?.width > 0 && nat?.height > 0) {
+                  setVideoAspect(nat.width / nat.height);
+                }
+              }}
             />
 
             {/* Impact Flash Effect Layer */}
@@ -239,10 +329,22 @@ export const BroadcastInVideoPlayer: React.FC<BroadcastInVideoPlayerProps> = ({
                 },
               ]}
             />
+
+            {/* Reel-style coaching callouts (elbow high / backlift / heel-to-toe) */}
+            <CoachingCalloutOverlay
+              phase={cuePhase}
+              shotType={shotType}
+              leadElbowAngle={liveLeadElbow}
+              kneeFlexionAngle={liveFrontKnee}
+              coachingTip={coachingTip}
+              anchors={liveAnchors}
+              videoAspect={videoAspect}
+              visible={showCoachCues && !isLoading}
+            />
           </>
         ) : (
           <View style={styles.noVideoBox}>
-            <Text style={styles.noVideoText}>NO VIDEO STREAM AVAILABLE</Text>
+            <Text style={styles.noVideoText}>No video available</Text>
           </View>
         )}
 
@@ -250,22 +352,34 @@ export const BroadcastInVideoPlayer: React.FC<BroadcastInVideoPlayerProps> = ({
         {!isLoading && (
           <View style={[styles.topOverlayBar, isFullscreen && styles.topOverlayBarFullscreen]}>
             {/* Live Telemetry Status Pill */}
-            <View style={styles.liveTelemetryBadge}>
-              <Animated.View style={[styles.liveDot, { opacity: pulseAnim }]} />
-              <Text style={styles.liveBadgeText}>
-                LIVE • {playbackSpeed}X
-              </Text>
-            </View>
+            {showHudOverlays ? (
+              <View style={styles.liveTelemetryBadge}>
+                <Animated.View style={[styles.liveDot, { opacity: pulseAnim }]} />
+                <Text style={styles.liveBadgeText}>
+                  Live · {playbackSpeed}x
+                </Text>
+              </View>
+            ) : (
+              <View />
+            )}
 
             {/* Top Quick Actions (HUD toggle, Angles toggle, Fullscreen) */}
             <View style={styles.topRightActions}>
+              <TouchableOpacity
+                style={[styles.hudToggleBtn, showCoachCues && styles.hudToggleBtnActive]}
+                onPress={() => setShowCoachCues(!showCoachCues)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.hudToggleText}>Cues</Text>
+              </TouchableOpacity>
+
               <TouchableOpacity
                 style={[styles.hudToggleBtn, showHudOverlays && styles.hudToggleBtnActive]}
                 onPress={() => setShowHudOverlays(!showHudOverlays)}
                 activeOpacity={0.7}
               >
                 <Text style={styles.hudToggleText}>
-                  {showHudOverlays ? '👁️ HUD' : '👁️‍🗨️ CLEAN'}
+                  {showHudOverlays ? 'HUD' : 'Clean'}
                 </Text>
               </TouchableOpacity>
 
@@ -275,7 +389,7 @@ export const BroadcastInVideoPlayer: React.FC<BroadcastInVideoPlayerProps> = ({
                   onPress={() => setShowAngleTags(!showAngleTags)}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.hudToggleText}>📐 {showAngleTags ? 'ANGLES' : 'OFF'}</Text>
+                  <Text style={styles.hudToggleText}>{showAngleTags ? 'Angles' : 'Angles'}</Text>
                 </TouchableOpacity>
               )}
 
@@ -286,7 +400,7 @@ export const BroadcastInVideoPlayer: React.FC<BroadcastInVideoPlayerProps> = ({
                   activeOpacity={0.7}
                 >
                   <Text style={styles.fullscreenBtnText}>
-                    {isFullscreen ? '✕ EXIT' : '⛶ EXPAND'}
+                    {isFullscreen ? 'Close' : 'Expand'}
                   </Text>
                 </TouchableOpacity>
               )}
@@ -301,9 +415,9 @@ export const BroadcastInVideoPlayer: React.FC<BroadcastInVideoPlayerProps> = ({
             <View style={[styles.angleTag, { borderColor: leadElbowColor, top: 48, left: 10 }]}>
               <View style={[styles.angleTagDot, { backgroundColor: leadElbowColor }]} />
               <View>
-                <Text style={styles.angleTagLabel}>LEAD ELBOW</Text>
+                <Text style={styles.angleTagLabel}>Lead elbow</Text>
                 <Text style={[styles.angleTagValue, { color: leadElbowColor }]}>
-                  {liveLeadElbow}° {liveLeadElbow >= 110 && liveLeadElbow <= 155 ? '✓ OPTIMAL' : '⚠ FIX'}
+                  {liveLeadElbow}° {liveLeadElbow >= 110 && liveLeadElbow <= 155 ? 'Good' : 'Fix'}
                 </Text>
               </View>
             </View>
@@ -312,9 +426,9 @@ export const BroadcastInVideoPlayer: React.FC<BroadcastInVideoPlayerProps> = ({
             <View style={[styles.angleTag, { borderColor: kneeColor, top: 110, left: 10 }]}>
               <View style={[styles.angleTagDot, { backgroundColor: kneeColor }]} />
               <View>
-                <Text style={styles.angleTagLabel}>FRONT KNEE</Text>
+                <Text style={styles.angleTagLabel}>Front knee</Text>
                 <Text style={[styles.angleTagValue, { color: kneeColor }]}>
-                  {liveFrontKnee}° {liveFrontKnee >= 125 && liveFrontKnee <= 155 ? '✓ STABLE' : liveFrontKnee > 155 ? '⚠ LOCKED' : '⚠ BEND'}
+                  {liveFrontKnee}° {liveFrontKnee >= 125 && liveFrontKnee <= 155 ? 'Stable' : liveFrontKnee > 155 ? 'Locked' : 'Bend'}
                 </Text>
               </View>
             </View>
@@ -323,9 +437,9 @@ export const BroadcastInVideoPlayer: React.FC<BroadcastInVideoPlayerProps> = ({
             <View style={[styles.angleTag, { borderColor: '#38bdf8', top: 48, right: 10 }]}>
               <View style={[styles.angleTagDot, { backgroundColor: '#38bdf8' }]} />
               <View style={{ alignItems: 'flex-end' }}>
-                <Text style={styles.angleTagLabel}>SPINE TILT</Text>
+                <Text style={styles.angleTagLabel}>Spine tilt</Text>
                 <Text style={[styles.angleTagValue, { color: '#38bdf8' }]}>
-                  {liveSpine}° STACKED
+                  {liveSpine}°
                 </Text>
               </View>
             </View>
@@ -334,9 +448,9 @@ export const BroadcastInVideoPlayer: React.FC<BroadcastInVideoPlayerProps> = ({
             <View style={[styles.angleTag, { borderColor: rearKneeColor, bottom: 14, left: 10 }]}>
               <View style={[styles.angleTagDot, { backgroundColor: rearKneeColor }]} />
               <View>
-                <Text style={styles.angleTagLabel}>REAR LEG</Text>
+                <Text style={styles.angleTagLabel}>Rear leg</Text>
                 <Text style={[styles.angleTagValue, { color: rearKneeColor }]}>
-                  {liveRearKnee}° {liveRearKnee >= 125 && liveRearKnee <= 165 ? '✓ BRACED' : liveRearKnee < 125 ? '⚠ COLLAPSE' : '⚠ STIFF'}
+                  {liveRearKnee}° {liveRearKnee >= 125 && liveRearKnee <= 165 ? 'Braced' : liveRearKnee < 125 ? 'Collapse' : 'Stiff'}
                 </Text>
               </View>
             </View>
@@ -347,19 +461,19 @@ export const BroadcastInVideoPlayer: React.FC<BroadcastInVideoPlayerProps> = ({
         {!isLoading && showHudOverlays && showTelemetryCard && (
           <View style={styles.telemetryCornerBox} pointerEvents="none">
             <View style={styles.telemetryRow}>
-              <Text style={styles.telemetryLabel}>⚡ EXIT SPEED</Text>
+              <Text style={styles.telemetryLabel}>Exit speed</Text>
               <Text style={styles.telemetryVal}>{exitVelocityKmh} km/h</Text>
             </View>
             <View style={styles.telemetryDivider} />
             <View style={styles.telemetryRow}>
-              <Text style={styles.telemetryLabel}>🎯 SWEET SPOT</Text>
+              <Text style={styles.telemetryLabel}>Sweet spot</Text>
               <Text style={styles.telemetryVal}>{Math.round(sweetSpotRatio * 100)}%</Text>
             </View>
             <View style={styles.telemetryDivider} />
             <View style={styles.telemetryRow}>
-              <Text style={styles.telemetryLabel}>📐 HEAD STACK</Text>
+              <Text style={styles.telemetryLabel}>Head stack</Text>
               <Text style={[styles.telemetryVal, { color: '#10b981' }]}>
-                +{headOffsetRatio}m STABLE
+                +{headOffsetRatio}m
               </Text>
             </View>
           </View>
@@ -374,22 +488,22 @@ export const BroadcastInVideoPlayer: React.FC<BroadcastInVideoPlayerProps> = ({
           {!isPlaying && (
             <View style={styles.pausedIndicator}>
               <Text style={styles.pausedIcon}>▶</Text>
-              <Text style={styles.pausedText}>PAUSED</Text>
+              <Text style={styles.pausedText}>Paused</Text>
             </View>
           )}
         </TouchableOpacity>
       </View>
 
-      {/* 🌟 SECTION 2: Interactive 4-Phase Stroke Scrubber Bar */}
+      {/* Jump buttons — only highlight when the client taps, never auto-switch */}
       <View style={styles.phaseScrubberContainer}>
-        {/* Stroke Phase Quick Jump Tabs */}
+        <Text style={styles.jumpHint}>Jump to phase</Text>
         <View style={styles.phaseTabsRow}>
           {(
             [
-              { id: 'STANCE', label: '1. STANCE', color: '#10b981' },
-              { id: 'BACKLIFT', label: '2. BACKLIFT', color: '#f59e0b' },
-              { id: 'IMPACT', label: '3. IMPACT ⚡', color: '#ef4444' },
-              { id: 'FINISH', label: '4. FINISH', color: '#a855f7' },
+              { id: 'STANCE', label: 'Start', color: '#10b981' },
+              { id: 'BACKLIFT', label: 'Lift', color: '#f59e0b' },
+              { id: 'IMPACT', label: 'Hit', color: '#ef4444' },
+              { id: 'FINISH', label: 'Finish', color: '#a855f7' },
             ] as const
           ).map((phase) => {
             const isActive = activePhase === phase.id;
@@ -403,12 +517,6 @@ export const BroadcastInVideoPlayer: React.FC<BroadcastInVideoPlayerProps> = ({
                 onPress={() => jumpToPhase(phase.id)}
                 activeOpacity={0.7}
               >
-                <View
-                  style={[
-                    styles.phasePillDot,
-                    { backgroundColor: isActive ? phase.color : '#64748b' },
-                  ]}
-                />
                 <Text
                   style={[
                     styles.phasePillText,
@@ -427,6 +535,9 @@ export const BroadcastInVideoPlayer: React.FC<BroadcastInVideoPlayerProps> = ({
           style={styles.timelineTouchArea}
           onPress={handleProgressBarPress}
           activeOpacity={0.9}
+          onLayout={(e) => {
+            trackWidthRef.current = e.nativeEvent.layout.width;
+          }}
         >
           <View style={styles.timelineTrack}>
             {/* Filled Progress */}
@@ -444,7 +555,7 @@ export const BroadcastInVideoPlayer: React.FC<BroadcastInVideoPlayerProps> = ({
             <View
               style={[
                 styles.timelineTickImpact,
-                { left: `${Math.round(impactFrameRatio * 100)}%` },
+                { left: `${Math.min(98, Math.max(2, impactFrameRatio * 100))}%` },
               ]}
             >
               <View style={styles.impactMarkerDot} />
@@ -456,7 +567,6 @@ export const BroadcastInVideoPlayer: React.FC<BroadcastInVideoPlayerProps> = ({
         {/* Time Stamp Row */}
         <View style={styles.timeRow}>
           <Text style={styles.timeCurrent}>{formatTime(positionMillis)}</Text>
-          <Text style={styles.timePhaseBadge}>CURRENT PHASE: {activePhase}</Text>
           <Text style={styles.timeTotal}>{formatTime(durationMillis)}</Text>
         </View>
       </View>
@@ -470,7 +580,7 @@ export const BroadcastInVideoPlayer: React.FC<BroadcastInVideoPlayerProps> = ({
           activeOpacity={0.7}
         >
           <Text style={styles.transportBtnIcon}>⏪</Text>
-          <Text style={styles.transportBtnSub}>-1 FRAME</Text>
+          <Text style={styles.transportBtnSub}>−1</Text>
         </TouchableOpacity>
 
         {/* Jump -0.5s */}
@@ -479,7 +589,7 @@ export const BroadcastInVideoPlayer: React.FC<BroadcastInVideoPlayerProps> = ({
           onPress={() => stepFrame(-500)}
           activeOpacity={0.7}
         >
-          <Text style={styles.transportMiniText}>-0.5s</Text>
+          <Text style={styles.transportMiniText}>−0.5s</Text>
         </TouchableOpacity>
 
         {/* Main Play / Pause Button */}
@@ -507,7 +617,7 @@ export const BroadcastInVideoPlayer: React.FC<BroadcastInVideoPlayerProps> = ({
           activeOpacity={0.7}
         >
           <Text style={styles.transportBtnIcon}>⏩</Text>
-          <Text style={styles.transportBtnSub}>+1 FRAME</Text>
+          <Text style={styles.transportBtnSub}>+1</Text>
         </TouchableOpacity>
 
         {/* Direct Jump to Impact Moment */}
@@ -516,19 +626,18 @@ export const BroadcastInVideoPlayer: React.FC<BroadcastInVideoPlayerProps> = ({
           onPress={() => jumpToPhase('IMPACT')}
           activeOpacity={0.7}
         >
-          <Text style={styles.impactJumpIcon}>⚡</Text>
-          <Text style={styles.impactJumpText}>IMPACT</Text>
+          <Text style={styles.impactJumpText}>Impact</Text>
         </TouchableOpacity>
       </View>
 
       {/* 🌟 SECTION 4: Slow-Motion Speed Selector Bar */}
       <View style={styles.speedSelectorBar}>
-        <Text style={styles.speedBarLabel}>BROADCAST SPEED:</Text>
+        <Text style={styles.speedBarLabel}>Speed</Text>
         <View style={styles.speedPillsGroup}>
           {[
-            { label: '0.25x Ultra-Slow', speed: 0.25 },
-            { label: '0.50x Slow-Mo', speed: 0.5 },
-            { label: '1.0x Realtime', speed: 1.0 },
+            { label: '0.25×', speed: 0.25 },
+            { label: '0.5×', speed: 0.5 },
+            { label: '1×', speed: 1.0 },
           ].map((item) => {
             const isSelected = playbackSpeed === item.speed;
             return (
@@ -635,7 +744,7 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   topOverlayBarFullscreen: {
-    top: Platform.OS === 'ios' ? 48 : 32,
+    top: Platform.OS === 'ios' ? 54 : ANDROID_STATUS_TOP + 10,
     left: 14,
     right: 14,
   },
@@ -658,44 +767,44 @@ const styles = StyleSheet.create({
   },
   liveBadgeText: {
     color: '#f1f5f9',
-    fontSize: 8,
-    fontWeight: '800',
-    letterSpacing: 0.3,
+    fontSize: 10,
+    fontWeight: '600',
+    letterSpacing: 0.2,
   },
   topRightActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
   },
   hudToggleBtn: {
-    backgroundColor: 'rgba(30, 41, 59, 0.8)',
-    paddingHorizontal: 6,
-    paddingVertical: 3.5,
-    borderRadius: 7,
+    backgroundColor: 'rgba(30, 41, 59, 0.82)',
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: 'rgba(255, 255, 255, 0.12)',
   },
   hudToggleBtnActive: {
-    backgroundColor: 'rgba(2, 132, 199, 0.85)',
-    borderColor: '#38bdf8',
+    backgroundColor: 'rgba(2, 132, 199, 0.9)',
+    borderColor: '#7dd3fc',
   },
   hudToggleText: {
     color: '#ffffff',
-    fontSize: 8,
-    fontWeight: '800',
+    fontSize: 11,
+    fontWeight: '600',
   },
   fullscreenBtn: {
     backgroundColor: 'rgba(15, 23, 42, 0.85)',
-    paddingHorizontal: 6,
-    paddingVertical: 3.5,
-    borderRadius: 7,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: '#38bdf8',
   },
   fullscreenBtnText: {
-    color: '#38bdf8',
-    fontSize: 8,
-    fontWeight: '800',
+    color: '#7dd3fc',
+    fontSize: 11,
+    fontWeight: '600',
   },
   anglesOverlayLayer: {
     ...StyleSheet.absoluteFillObject,
@@ -705,12 +814,12 @@ const styles = StyleSheet.create({
     position: 'absolute',
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(15, 23, 42, 0.88)',
-    paddingHorizontal: 7,
-    paddingVertical: 4,
-    borderRadius: 8,
-    borderWidth: 1.2,
-    gap: 5,
+    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 9,
+    borderWidth: 1,
+    gap: 6,
   },
   angleTagDot: {
     width: 5,
@@ -719,42 +828,41 @@ const styles = StyleSheet.create({
   },
   angleTagLabel: {
     color: '#94a3b8',
-    fontSize: 7.5,
-    fontWeight: '700',
-    letterSpacing: 0.3,
+    fontSize: 10,
+    fontWeight: '600',
   },
   angleTagValue: {
-    fontSize: 9,
-    fontWeight: '900',
+    fontSize: 11,
+    fontWeight: '700',
   },
   telemetryCornerBox: {
     position: 'absolute',
     bottom: 10,
     right: 10,
     backgroundColor: 'rgba(15, 23, 42, 0.92)',
-    paddingHorizontal: 9,
-    paddingVertical: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: 'rgba(56, 189, 248, 0.25)',
     zIndex: 6,
-    gap: 4,
+    gap: 5,
   },
   telemetryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 12,
+    gap: 14,
   },
   telemetryLabel: {
     color: '#94a3b8',
-    fontSize: 8,
-    fontWeight: '700',
+    fontSize: 11,
+    fontWeight: '500',
   },
   telemetryVal: {
     color: '#f8fafc',
-    fontSize: 8.5,
-    fontWeight: '900',
+    fontSize: 11,
+    fontWeight: '700',
   },
   telemetryDivider: {
     height: 0.8,
@@ -770,9 +878,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(15, 23, 42, 0.75)',
-    width: 68,
-    height: 68,
-    borderRadius: 34,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     borderWidth: 1.5,
     borderColor: '#38bdf8',
   },
@@ -783,10 +891,9 @@ const styles = StyleSheet.create({
   },
   pausedText: {
     color: '#e2e8f0',
-    fontSize: 8,
-    fontWeight: '800',
+    fontSize: 10,
+    fontWeight: '600',
     marginTop: 2,
-    letterSpacing: 0.5,
   },
   phaseScrubberContainer: {
     backgroundColor: 'rgba(15, 23, 42, 0.98)',
@@ -795,6 +902,12 @@ const styles = StyleSheet.create({
     paddingBottom: 6,
     borderTopWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  jumpHint: {
+    color: '#94a3b8',
+    fontSize: 11,
+    fontWeight: '600',
+    marginBottom: 8,
   },
   phaseTabsRow: {
     flexDirection: 'row',
@@ -807,9 +920,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#1e293b',
-    paddingVertical: 5,
+    paddingVertical: 7,
     paddingHorizontal: 4,
-    borderRadius: 8,
+    borderRadius: 9,
     borderWidth: 1,
     borderColor: '#334155',
     gap: 4,
@@ -821,8 +934,8 @@ const styles = StyleSheet.create({
   },
   phasePillText: {
     color: '#94a3b8',
-    fontSize: 8.5,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '600',
   },
   timelineTouchArea: {
     paddingVertical: 6,
@@ -912,21 +1025,21 @@ const styles = StyleSheet.create({
     color: '#e2e8f0',
   },
   transportBtnSub: {
-    fontSize: 7,
-    fontWeight: '800',
+    fontSize: 10,
+    fontWeight: '600',
     color: '#94a3b8',
     marginTop: 1,
   },
   transportBtnMini: {
     backgroundColor: '#1e293b',
-    paddingVertical: 6,
-    paddingHorizontal: 7,
-    borderRadius: 6,
+    paddingVertical: 7,
+    paddingHorizontal: 8,
+    borderRadius: 8,
   },
   transportMiniText: {
     color: '#cbd5e1',
-    fontSize: 9,
-    fontWeight: '700',
+    fontSize: 11,
+    fontWeight: '600',
   },
   playPauseBtn: {
     width: 44,
@@ -949,8 +1062,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#7f1d1d',
-    paddingVertical: 6,
-    paddingHorizontal: 8,
+    paddingVertical: 7,
+    paddingHorizontal: 10,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#ef4444',
@@ -961,9 +1074,8 @@ const styles = StyleSheet.create({
   },
   impactJumpText: {
     color: '#fecaca',
-    fontSize: 8.5,
-    fontWeight: '900',
-    letterSpacing: 0.3,
+    fontSize: 11,
+    fontWeight: '700',
   },
   speedSelectorBar: {
     flexDirection: 'row',
@@ -976,10 +1088,9 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.05)',
   },
   speedBarLabel: {
-    color: '#64748b',
-    fontSize: 8.5,
-    fontWeight: '800',
-    letterSpacing: 0.5,
+    color: '#94a3b8',
+    fontSize: 11,
+    fontWeight: '600',
   },
   speedPillsGroup: {
     flexDirection: 'row',
@@ -987,9 +1098,9 @@ const styles = StyleSheet.create({
   },
   speedPill: {
     backgroundColor: '#1e293b',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: 'transparent',
   },
@@ -999,12 +1110,12 @@ const styles = StyleSheet.create({
   },
   speedPillText: {
     color: '#94a3b8',
-    fontSize: 8.5,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '600',
   },
   speedPillTextActive: {
     color: '#38bdf8',
-    fontWeight: '800',
+    fontWeight: '700',
   },
   ghostToggleBtnActive: {
     backgroundColor: 'rgba(180, 83, 9, 0.85)',

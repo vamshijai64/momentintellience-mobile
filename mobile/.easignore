@@ -7,9 +7,14 @@ web-build/
 # Ignore local Android build outputs, caches, and local SDK properties
 android/build/
 android/app/build/
+android/app/.cxx/
+android/.cxx/
 android/.gradle/
+android/.kotlin/
 android/local.properties
 .gradle/
+*.apk
+*.aab
 
 # Local env files
 .env*.local
