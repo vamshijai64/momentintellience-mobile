@@ -3,22 +3,23 @@ import {
   StyleSheet,
   View,
   Text,
-  TouchableOpacity,
   ActivityIndicator,
   ScrollView,
   Platform,
   StatusBar,
 } from 'react-native';
 import { clearAuthSession, getCurrentUser, isGuestEmail, UserProfile } from '../services/api';
+import { ChevronLeft, LogOut } from 'lucide-react-native';
+import { colors, radii } from '../theme';
+import { Card, CardContent } from '../components/ui/Card';
+import { Button } from '../components/ui/Button';
+import { Badge } from '../components/ui/Badge';
+import { Avatar } from '../components/ui/Avatar';
 
 interface SignOutScreenProps {
   onCancel: () => void;
   onSignedOut: () => void;
 }
-
-const ACCENT = '#0d9488';
-const ACCENT_SOFT = '#ccfbf1';
-const ACCENT_DEEP = '#0f766e';
 
 export const SignOutScreen: React.FC<SignOutScreenProps> = ({ onCancel, onSignedOut }) => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -64,28 +65,32 @@ export const SignOutScreen: React.FC<SignOutScreenProps> = ({ onCancel, onSigned
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#faf9f6" />
-      <View style={styles.blobTL} />
-      <View style={styles.blobTR} />
+      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.headerBar}>
-          <TouchableOpacity style={styles.backButton} onPress={onCancel} activeOpacity={0.8}>
-            <Text style={styles.backButtonText}>← Back</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Sign out</Text>
-          <View style={{ width: 72 }} />
+          <Button
+            variant="outline"
+            size="sm"
+            onPress={onCancel}
+            iconLeft={<ChevronLeft size={16} color={colors.foreground} />}
+            style={styles.backBtn}
+          >
+            Back
+          </Button>
+          <Text style={styles.headerTitle}>Sign Out</Text>
+          <View style={{ width: 64 }} />
         </View>
 
         {loading ? (
           <View style={styles.centerBox}>
-            <ActivityIndicator size="large" color={ACCENT} />
+            <ActivityIndicator size="large" color={colors.primary} />
             <Text style={styles.loadingText}>Loading account...</Text>
           </View>
         ) : (
-          <>
+          <View style={styles.bodyWrapper}>
             <View style={styles.iconCircle}>
-              <Text style={styles.iconEmoji}>{isGuest ? '👋' : '🔒'}</Text>
+              <LogOut size={26} color={colors.destructive} strokeWidth={2.2} />
             </View>
 
             <Text style={styles.title}>
@@ -93,260 +98,157 @@ export const SignOutScreen: React.FC<SignOutScreenProps> = ({ onCancel, onSigned
             </Text>
             <Text style={styles.subtitle}>
               {isGuest
-                ? 'You will return to the sign-in screen. Guest uploads on this phone stay saved under the guest account until you sign in with email.'
-                : 'You will need to sign in again to save new sessions to this account. Your past uploads stay linked to this email.'}
+                ? 'You will return to the sign-in screen. Guest uploads on this phone remain stored locally.'
+                : 'You will need to sign in again to sync new sessions. Your past uploads stay safe in the cloud.'}
             </Text>
 
             {profile && (
-              <View style={styles.accountCard}>
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>{initials}</Text>
-                </View>
-                <View style={styles.accountInfo}>
-                  <Text style={styles.accountName}>{profile.full_name || 'Player'}</Text>
-                  <Text style={styles.accountEmail} numberOfLines={1}>
-                    {profile.email}
-                  </Text>
-                  <View style={[styles.badge, isGuest ? styles.badgeGuest : styles.badgeMember]}>
-                    <Text style={[styles.badgeText, isGuest ? styles.badgeGuestText : styles.badgeMemberText]}>
-                      {isGuest ? 'Guest on this phone' : 'Signed-in member'}
+              <Card style={styles.accountCard}>
+                <CardContent style={styles.accountCardContent}>
+                  <Avatar fallbackText={initials} size="default" />
+                  <View style={styles.accountInfo}>
+                    <Text style={styles.accountName}>{profile.full_name || 'Player'}</Text>
+                    <Text style={styles.accountEmail} numberOfLines={1}>
+                      {profile.email}
                     </Text>
+                    <Badge variant={isGuest ? 'secondary' : 'default'} style={styles.badge}>
+                      {isGuest ? 'Guest' : 'Member'}
+                    </Badge>
                   </View>
-                </View>
-              </View>
+                </CardContent>
+              </Card>
             )}
 
             {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-            <TouchableOpacity
-              style={[styles.signOutBtn, signingOut && styles.signOutBtnDisabled]}
-              onPress={handleSignOut}
-              disabled={signingOut}
-              activeOpacity={0.88}
-            >
-              {signingOut ? (
-                <ActivityIndicator color="#ffffff" />
-              ) : (
-                <Text style={styles.signOutBtnText}>
-                  {isGuest ? 'End session & go to sign in' : 'Sign out'}
-                </Text>
-              )}
-            </TouchableOpacity>
+            <View style={styles.actionColumn}>
+              <Button
+                variant="destructive"
+                size="lg"
+                onPress={handleSignOut}
+                loading={signingOut}
+                disabled={signingOut}
+              >
+                {isGuest ? 'End Session & Go to Sign In' : 'Sign Out'}
+              </Button>
 
-            <TouchableOpacity
-              style={styles.cancelBtn}
-              onPress={onCancel}
-              disabled={signingOut}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.cancelBtnText}>Stay signed in</Text>
-            </TouchableOpacity>
-          </>
+              <Button
+                variant="outline"
+                size="lg"
+                onPress={onCancel}
+                disabled={signingOut}
+              >
+                Stay Signed In
+              </Button>
+            </View>
+          </View>
         )}
       </ScrollView>
     </View>
   );
 };
 
-const softShadow = Platform.select({
-  ios: {
-    shadowColor: '#0f172a',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.07,
-    shadowRadius: 16,
-  },
-  android: { elevation: 3 },
-  default: {},
-});
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#faf9f6',
-  },
-  blobTL: {
-    position: 'absolute',
-    top: -70,
-    left: -60,
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: '#99f6e4',
-    opacity: 0.4,
-  },
-  blobTR: {
-    position: 'absolute',
-    top: 60,
-    right: -70,
-    width: 160,
-    height: 160,
-    borderRadius: 80,
-    backgroundColor: '#fef3c7',
-    opacity: 0.35,
+    backgroundColor: colors.background,
   },
   content: {
-    padding: 24,
-    paddingTop: Platform.OS === 'ios' ? 20 : 28,
+    padding: 22,
+    paddingTop: Platform.OS === 'ios' ? 48 : 32,
     paddingBottom: 40,
   },
   headerBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 28,
+    marginBottom: 24,
   },
-  backButton: {
-    backgroundColor: '#ffffff',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  backButtonText: {
-    color: ACCENT_DEEP,
-    fontSize: 13,
-    fontWeight: '700',
+  backBtn: {
+    borderRadius: radii.full,
+    paddingHorizontal: 12,
   },
   headerTitle: {
-    color: '#0f172a',
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '700',
+    color: colors.foreground,
+    letterSpacing: -0.2,
   },
   centerBox: {
     alignItems: 'center',
-    paddingTop: 80,
-    gap: 12,
+    paddingTop: 60,
   },
   loadingText: {
-    color: '#64748b',
+    marginTop: 12,
     fontSize: 13,
-    fontWeight: '600',
+    color: colors.mutedForeground,
+  },
+  bodyWrapper: {
+    alignItems: 'center',
   },
   iconCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: '#fff1f2',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: colors.destructiveSoft,
+    borderWidth: 1,
+    borderColor: colors.destructiveBorder,
     alignItems: 'center',
     justifyContent: 'center',
-    alignSelf: 'center',
-    marginBottom: 18,
-    borderWidth: 2,
-    borderColor: '#fecdd3',
-  },
-  iconEmoji: {
-    fontSize: 32,
+    marginBottom: 16,
+    marginTop: 10,
   },
   title: {
-    color: '#0f172a',
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '800',
+    color: colors.foreground,
     textAlign: 'center',
-    marginBottom: 10,
+    letterSpacing: -0.3,
+    marginBottom: 8,
   },
   subtitle: {
-    color: '#64748b',
-    fontSize: 14,
-    lineHeight: 21,
+    fontSize: 13.5,
+    color: colors.mutedForeground,
     textAlign: 'center',
-    marginBottom: 22,
-    paddingHorizontal: 8,
+    lineHeight: 19,
+    paddingHorizontal: 16,
+    marginBottom: 24,
   },
   accountCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
-    padding: 18,
+    width: '100%',
+    marginBottom: 24,
+  },
+  accountCardContent: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
-    marginBottom: 24,
-    ...softShadow,
-  },
-  avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 20,
-    backgroundColor: ACCENT_SOFT,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#a7f3d0',
-  },
-  avatarText: {
-    color: ACCENT_DEEP,
-    fontSize: 18,
-    fontWeight: '800',
   },
   accountInfo: {
     flex: 1,
-    minWidth: 0,
   },
   accountName: {
-    color: '#0f172a',
-    fontSize: 16,
-    fontWeight: '800',
-    marginBottom: 2,
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.foreground,
+    letterSpacing: -0.1,
   },
   accountEmail: {
-    color: '#64748b',
-    fontSize: 12,
-    marginBottom: 8,
+    fontSize: 12.5,
+    color: colors.mutedForeground,
+    marginTop: 2,
+    marginBottom: 6,
   },
   badge: {
     alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-  },
-  badgeGuest: {
-    backgroundColor: '#fef3c7',
-  },
-  badgeMember: {
-    backgroundColor: ACCENT_SOFT,
-  },
-  badgeText: {
-    fontSize: 10,
-    fontWeight: '800',
-  },
-  badgeGuestText: {
-    color: '#b45309',
-  },
-  badgeMemberText: {
-    color: ACCENT_DEEP,
   },
   errorText: {
-    color: '#be123c',
-    fontSize: 13,
+    color: colors.destructive,
+    fontSize: 12.5,
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
   },
-  signOutBtn: {
-    backgroundColor: '#be123c',
-    borderRadius: 18,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  signOutBtnDisabled: {
-    opacity: 0.7,
-  },
-  signOutBtnText: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '800',
-  },
-  cancelBtn: {
-    backgroundColor: '#ffffff',
-    borderRadius: 18,
-    paddingVertical: 14,
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: '#e2e8f0',
-  },
-  cancelBtnText: {
-    color: ACCENT_DEEP,
-    fontSize: 14,
-    fontWeight: '800',
+  actionColumn: {
+    width: '100%',
+    gap: 10,
   },
 });

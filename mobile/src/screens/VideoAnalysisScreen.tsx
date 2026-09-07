@@ -56,7 +56,7 @@ export const VideoAnalysisScreen: React.FC<VideoAnalysisScreenProps> = ({
   const [selectedShotIndex, setSelectedShotIndex] = useState<number>(0);
   const [viewMode, setViewMode] = useState<ViewMode>('detail');
   const [showScorecardModal, setShowScorecardModal] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState<'verdict' | 'metrics' | 'stadium' | 'masterclass'>('verdict');
+  const [activeTab, setActiveTab] = useState<'stadium' | 'verdict' | 'metrics' | 'masterclass'>('stadium');
 
   // Fresh uploads poll until done; history opens the saved report instantly.
   useEffect(() => {
@@ -99,6 +99,8 @@ export const VideoAnalysisScreen: React.FC<VideoAnalysisScreenProps> = ({
   const processedVideoUrl = rawOverlayPath
     ? getOverlayVideoUrl(rawOverlayPath)
     : videoUri;
+  const rawOriginalPath = report?.original_video_url || (report as any)?.video_path;
+  const cleanVideoUrl = rawOriginalPath ? getOverlayVideoUrl(rawOriginalPath) : videoUri;
 
   // Extract dynamic scores and shot metrics from API report
   const overallScore = report?.overall_score ?? report?.report_json?.scores?.overall_score;
@@ -313,6 +315,7 @@ export const VideoAnalysisScreen: React.FC<VideoAnalysisScreenProps> = ({
         {!isFullscreen ? (
           <BroadcastInVideoPlayer
             videoUri={processedVideoUrl}
+            cleanVideoUri={cleanVideoUrl}
             isLoading={isLoading}
             leadElbowAngle={leftElbowAngle}
             kneeFlexionAngle={leftKneeAngle}
@@ -358,12 +361,26 @@ export const VideoAnalysisScreen: React.FC<VideoAnalysisScreenProps> = ({
           onOpenScorecard={() => setShowScorecardModal(true)}
         />
 
+        {/* 🎙️ AI Coach Broadcast Voice Commentary Player */}
+        <AICoachVoicePlayer
+          score={activeShotVerdict?.composite_score ?? (typeof overallScore === 'number' ? Math.round(overallScore) : 70)}
+          techniqueScore={activeShotVerdict?.technique_score ?? 63}
+          executionScore={activeShotVerdict?.execution_score}
+          shotType={shotType}
+          verdictLabel={activeShotVerdict?.verdict || 'GOOD SHOT'}
+          leadElbowAngle={leftElbowAngle}
+          kneeFlexionAngle={leftKneeAngle}
+          headOverFootOk={coachingCue?.head_over_foot_ok !== false}
+          reason={coachingCue?.bottom || activeShotVerdict?.reason}
+        />
+
         {/* 🎛️ Segmented Glass Navigation Pills */}
         <View style={styles.tabContainer}>
           {[
+              { id: 'stadium', label: 'Stadium', icon: (active: boolean) => <GlassStadiumTabIcon size={16} active={active} /> },
             { id: 'verdict', label: 'Verdict', icon: (active: boolean) => <GlassVerdictTabIcon size={16} active={active} /> },
             { id: 'metrics', label: '3D Form', icon: (active: boolean) => <GlassMetricsTabIcon size={16} active={active} /> },
-            { id: 'stadium', label: 'Stadium', icon: (active: boolean) => <GlassStadiumTabIcon size={16} active={active} /> },
+          
             { id: 'masterclass', label: 'Mastery', icon: (active: boolean) => <GlassMasterclassTabIcon size={16} active={active} /> },
           ].map((tab) => {
             const isActive = activeTab === tab.id;
@@ -400,18 +417,6 @@ export const VideoAnalysisScreen: React.FC<VideoAnalysisScreenProps> = ({
               spineAngle={spineAngle}
               headOffsetRatio={coachingCue?.head_over_foot_ok === false ? 0.2 : 0.06}
               overallScore={typeof overallScore === 'number' ? Math.round(overallScore) : undefined}
-            />
-
-            {/* AI Coach Broadcast Audio Commentary Player */}
-            <AICoachVoicePlayer
-              score={activeShotVerdict?.composite_score ?? (typeof overallScore === 'number' ? Math.round(overallScore) : 70)}
-              techniqueScore={activeShotVerdict?.technique_score ?? 63}
-              executionScore={activeShotVerdict?.execution_score}
-              shotType={shotType}
-              verdictLabel={activeShotVerdict?.verdict || 'GOOD SHOT'}
-              leadElbowAngle={leftElbowAngle}
-              kneeFlexionAngle={leftKneeAngle}
-              reason={coachingCue?.bottom || activeShotVerdict?.reason}
             />
 
             {/* Hawk-Eye Biomechanical Telemetry Gauges */}
@@ -549,6 +554,7 @@ export const VideoAnalysisScreen: React.FC<VideoAnalysisScreenProps> = ({
           >
             <BroadcastInVideoPlayer
               videoUri={processedVideoUrl}
+              cleanVideoUri={cleanVideoUrl}
               isLoading={isLoading}
               leadElbowAngle={leftElbowAngle}
               kneeFlexionAngle={leftKneeAngle}

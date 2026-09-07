@@ -3,7 +3,6 @@ import {
   StyleSheet,
   View,
   Text,
-  TouchableOpacity,
   ActivityIndicator,
   ScrollView,
   Platform,
@@ -14,7 +13,13 @@ import {
   getShotHistory,
   UserProfile,
 } from '../services/api';
-import { ChevronLeft, ArrowRight, ChartColumn } from 'lucide-react-native';
+import { ChevronLeft, ArrowRight, ChartColumn, BookOpen, LogOut } from 'lucide-react-native';
+import { colors, radii } from '../theme';
+import { Card, CardContent } from '../components/ui/Card';
+import { Button } from '../components/ui/Button';
+import { Badge } from '../components/ui/Badge';
+import { Avatar } from '../components/ui/Avatar';
+import { Separator } from '../components/ui/Separator';
 
 interface ProfileScreenProps {
   onBack: () => void;
@@ -22,10 +27,6 @@ interface ProfileScreenProps {
   onViewGuide?: () => void;
   onSignOut: () => void;
 }
-
-const ACCENT = '#38bdf8';
-const ACCENT_SOFT = 'rgba(56, 189, 248, 0.15)';
-const ACCENT_DEEP = '#0284c7';
 
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   onBack,
@@ -71,105 +72,141 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#060b14" />
-      <View style={styles.blobCyan} />
-      <View style={styles.blobBlue} />
+      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Top App Header */}
         <View style={styles.headerBar}>
-          <TouchableOpacity style={styles.backButton} onPress={onBack} activeOpacity={0.8}>
-            <ChevronLeft size={18} color="#38bdf8" strokeWidth={2.6} />
-            <Text style={styles.backText}>Camera</Text>
-          </TouchableOpacity>
+          <Button
+            variant="outline"
+            size="sm"
+            onPress={onBack}
+            iconLeft={<ChevronLeft size={16} color={colors.foreground} />}
+            style={styles.backBtn}
+          >
+            Camera
+          </Button>
           <Text style={styles.headerTitle}>Player Profile</Text>
-          <View style={{ width: 60 }} />
+          <View style={{ width: 70 }} />
         </View>
 
         {loading ? (
           <View style={styles.centerBox}>
-            <ActivityIndicator size="large" color={ACCENT} />
+            <ActivityIndicator size="large" color={colors.primary} />
             <Text style={styles.loadingText}>Loading profile...</Text>
           </View>
         ) : error ? (
           <View style={styles.centerBox}>
             <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity style={styles.retryBtn} onPress={loadProfile}>
-              <Text style={styles.retryBtnText}>Retry</Text>
-            </TouchableOpacity>
+            <Button variant="outline" size="sm" onPress={loadProfile} style={{ marginTop: 12 }}>
+              Retry
+            </Button>
           </View>
         ) : (
           <>
-            <View style={styles.heroCard}>
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>{initials}</Text>
-              </View>
-              <Text style={styles.nameText}>{profile?.full_name || 'Player'}</Text>
-              <Text style={styles.emailText}>{profile?.email}</Text>
-              <View style={[styles.badge, isGuest ? styles.badgeGuest : styles.badgeMember]}>
-                <Text style={[styles.badgeText, isGuest ? styles.badgeGuestText : styles.badgeMemberText]}>
+            {/* Hero Profile Card */}
+            <Card style={styles.heroCard}>
+              <CardContent style={styles.heroContent}>
+                <Avatar fallbackText={initials} size="lg" style={styles.avatar} />
+                <Text style={styles.nameText}>{profile?.full_name || 'Player'}</Text>
+                <Text style={styles.emailText}>{profile?.email}</Text>
+
+                <Badge
+                  variant={isGuest ? 'secondary' : 'default'}
+                  dot
+                  style={styles.badge}
+                >
                   {isGuest ? 'Guest on this device' : 'Signed-in member'}
-                </Text>
-              </View>
-            </View>
+                </Badge>
+              </CardContent>
+            </Card>
 
+            {/* Quick Stats Grid */}
             <View style={styles.statsRow}>
-              <View style={styles.statCard}>
-                <Text style={styles.statValue}>{sessionCount}</Text>
-                <Text style={styles.statLabel}>Saved Sessions</Text>
-              </View>
-              <View style={styles.statCard}>
-                <Text style={styles.statValue}>{profile?.is_active === false ? 'Off' : 'Active'}</Text>
-                <Text style={styles.statLabel}>AI Cloud Status</Text>
-              </View>
+              <Card style={styles.statCard}>
+                <CardContent>
+                  <Text style={styles.statValue}>{sessionCount}</Text>
+                  <Text style={styles.statLabel}>Saved Sessions</Text>
+                </CardContent>
+              </Card>
+
+              <Card style={styles.statCard}>
+                <CardContent>
+                  <Text style={[styles.statValue, { color: colors.successText }]}>
+                    {profile?.is_active === false ? 'Inactive' : 'Active'}
+                  </Text>
+                  <Text style={styles.statLabel}>AI Cloud Status</Text>
+                </CardContent>
+              </Card>
             </View>
 
-            <Text style={styles.sectionTitle}>Account Details</Text>
-            <View style={styles.menuCard}>
-              <View style={styles.menuRow}>
-                <Text style={styles.menuLabel}>Full Name</Text>
-                <Text style={styles.menuValue}>{profile?.full_name || '—'}</Text>
-              </View>
-              <View style={styles.divider} />
-              <View style={styles.menuRow}>
-                <Text style={styles.menuLabel}>Email</Text>
-                <Text style={styles.menuValue} numberOfLines={1}>
-                  {profile?.email || '—'}
-                </Text>
-              </View>
-              {!!profile?.created_at && (
-                <>
-                  <View style={styles.divider} />
-                  <View style={styles.menuRow}>
-                    <Text style={styles.menuLabel}>Member Since</Text>
-                    <Text style={styles.menuValue}>
-                      {new Date(profile.created_at).toLocaleDateString()}
-                    </Text>
-                  </View>
-                </>
-              )}
-            </View>
-
-            <TouchableOpacity style={styles.primaryBtn} onPress={onViewHistory} activeOpacity={0.88}>
-              <View style={styles.primaryBtnLeft}>
-                <View style={styles.primaryBtnIconWrap}>
-                  <ChartColumn size={16} color="#ffffff" strokeWidth={2.4} />
+            {/* Account Details Section */}
+            <Text style={styles.sectionHeader}>Account Details</Text>
+            <Card style={styles.detailsCard}>
+              <CardContent>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Full Name</Text>
+                  <Text style={styles.detailValue}>{profile?.full_name || '—'}</Text>
                 </View>
-                <Text style={styles.primaryBtnText}>Open Shot History & Analytics</Text>
-              </View>
-              <View style={styles.primaryBtnArrowCircle}>
-                <ArrowRight size={18} color="#ffffff" strokeWidth={2.6} />
-              </View>
-            </TouchableOpacity>
+                <Separator style={styles.separator} />
 
-            {onViewGuide && (
-              <TouchableOpacity style={styles.guideBtn} onPress={onViewGuide} activeOpacity={0.85}>
-                <Text style={styles.guideBtnText}>📖 Replay Batting & Framing Guide</Text>
-              </TouchableOpacity>
-            )}
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Email</Text>
+                  <Text style={styles.detailValue} numberOfLines={1}>
+                    {profile?.email || '—'}
+                  </Text>
+                </View>
 
-            <TouchableOpacity style={styles.logoutBtn} onPress={onSignOut} activeOpacity={0.85}>
-              <Text style={styles.logoutBtnText}>Sign Out</Text>
-            </TouchableOpacity>
+                {!!profile?.created_at && (
+                  <>
+                    <Separator style={styles.separator} />
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Member Since</Text>
+                      <Text style={styles.detailValue}>
+                        {new Date(profile.created_at).toLocaleDateString()}
+                      </Text>
+                    </View>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Actions */}
+            <View style={styles.actionGroup}>
+              <Button
+                variant="default"
+                size="lg"
+                onPress={onViewHistory}
+                iconLeft={<ChartColumn size={17} color={colors.primaryForeground} strokeWidth={2.2} />}
+                iconRight={<ArrowRight size={17} color={colors.primaryForeground} strokeWidth={2.4} />}
+                style={styles.primaryActionBtn}
+              >
+                Open Shot History & Analytics
+              </Button>
+
+              {onViewGuide && (
+                <Button
+                  variant="outline"
+                  size="default"
+                  onPress={onViewGuide}
+                  iconLeft={<BookOpen size={16} color={colors.foreground} />}
+                  style={styles.secondaryActionBtn}
+                >
+                  Replay Batting & Framing Guide
+                </Button>
+              )}
+
+              <Button
+                variant="ghost"
+                size="default"
+                onPress={onSignOut}
+                iconLeft={<LogOut size={16} color={colors.destructive} />}
+                textStyle={{ color: colors.destructive, fontWeight: '600' }}
+                style={styles.signOutBtn}
+              >
+                Sign Out
+              </Button>
+            </View>
           </>
         )}
       </ScrollView>
@@ -177,161 +214,72 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   );
 };
 
-const softShadow = Platform.select({
-  ios: {
-    shadowColor: '#0f172a',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.07,
-    shadowRadius: 16,
-  },
-  android: { elevation: 3 },
-  default: {},
-});
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#060b14',
-  },
-  blobCyan: {
-    position: 'absolute',
-    top: -70,
-    left: -60,
-    width: 220,
-    height: 220,
-    borderRadius: 110,
-    backgroundColor: 'rgba(56, 189, 248, 0.12)',
-  },
-  blobBlue: {
-    position: 'absolute',
-    top: 60,
-    right: -70,
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-    backgroundColor: 'rgba(2, 132, 199, 0.1)',
+    backgroundColor: colors.background,
   },
   content: {
-    padding: 24,
-    paddingTop: Platform.OS === 'ios' ? 20 : 28,
+    padding: 20,
+    paddingTop: Platform.OS === 'ios' ? 16 : 24,
     paddingBottom: 110,
   },
   headerBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 22,
+    marginBottom: 20,
   },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    paddingLeft: 6,
-    paddingRight: 12,
-    paddingVertical: 7,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
-    gap: 2,
-  },
-  backText: {
-    color: '#e2e8f0',
-    fontSize: 12,
-    fontWeight: '700',
+  backBtn: {
+    borderRadius: radii.full,
+    paddingHorizontal: 10,
+    height: 34,
   },
   headerTitle: {
-    color: '#ffffff',
     fontSize: 16,
-    fontWeight: '800',
-    letterSpacing: 0.5,
+    fontWeight: '700',
+    color: colors.foreground,
+    letterSpacing: -0.2,
   },
   centerBox: {
     alignItems: 'center',
     paddingTop: 60,
-    gap: 12,
   },
   loadingText: {
-    color: '#94a3b8',
+    marginTop: 12,
     fontSize: 13,
-    fontWeight: '600',
+    color: colors.mutedForeground,
   },
   errorText: {
-    color: '#f87171',
-    fontSize: 14,
+    color: colors.destructive,
+    fontSize: 13,
     textAlign: 'center',
-    paddingHorizontal: 16,
-  },
-  retryBtn: {
-    backgroundColor: '#0284c7',
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 12,
-  },
-  retryBtnText: {
-    color: '#ffffff',
-    fontWeight: '700',
+    paddingHorizontal: 20,
   },
   heroCard: {
-    backgroundColor: '#0a1224',
-    borderRadius: 24,
-    padding: 24,
+    marginBottom: 14,
+  },
+  heroContent: {
     alignItems: 'center',
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.25)',
-    ...softShadow,
+    paddingVertical: 10,
   },
   avatar: {
-    width: 76,
-    height: 76,
-    borderRadius: 28,
-    backgroundColor: 'rgba(56, 189, 248, 0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 14,
-    borderWidth: 1.5,
-    borderColor: '#38bdf8',
-  },
-  avatarText: {
-    color: '#38bdf8',
-    fontSize: 24,
-    fontWeight: '800',
-  },
-  nameText: {
-    color: '#ffffff',
-    fontSize: 20,
-    fontWeight: '800',
-    marginBottom: 4,
-  },
-  emailText: {
-    color: '#94a3b8',
-    fontSize: 13,
     marginBottom: 12,
   },
-  badge: {
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 999,
-  },
-  badgeGuest: {
-    backgroundColor: 'rgba(245, 158, 11, 0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(245, 158, 11, 0.3)',
-  },
-  badgeMember: {
-    backgroundColor: 'rgba(56, 189, 248, 0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.3)',
-  },
-  badgeText: {
-    fontSize: 10.5,
+  nameText: {
+    fontSize: 20,
     fontWeight: '800',
+    color: colors.foreground,
+    letterSpacing: -0.3,
   },
-  badgeGuestText: {
-    color: '#fbbf24',
+  emailText: {
+    fontSize: 13,
+    color: colors.mutedForeground,
+    marginTop: 2,
+    marginBottom: 10,
   },
-  badgeMemberText: {
-    color: '#38bdf8',
+  badge: {
+    marginTop: 2,
   },
   statsRow: {
     flexDirection: 'row',
@@ -340,133 +288,65 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.75)',
-    borderRadius: 18,
-    paddingVertical: 16,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    ...softShadow,
+    padding: 14,
   },
   statValue: {
-    color: '#ffffff',
-    fontSize: 22,
-    fontWeight: '900',
+    fontSize: 24,
+    fontWeight: '800',
+    color: colors.foreground,
+    letterSpacing: -0.4,
   },
   statLabel: {
-    color: '#94a3b8',
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 12,
+    color: colors.mutedForeground,
     marginTop: 4,
+    fontWeight: '500',
   },
-  sectionTitle: {
-    color: '#64748b',
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 1,
-    marginBottom: 10,
+  sectionHeader: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.mutedForeground,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginBottom: 8,
+    marginLeft: 4,
   },
-  menuCard: {
-    backgroundColor: 'rgba(15, 23, 42, 0.75)',
-    borderRadius: 18,
-    paddingHorizontal: 16,
-    marginBottom: 18,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    ...softShadow,
+  detailsCard: {
+    marginBottom: 24,
+    padding: 16,
   },
-  menuRow: {
+  detailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 14,
-    gap: 12,
+    paddingVertical: 6,
   },
-  menuLabel: {
-    color: '#94a3b8',
+  detailLabel: {
     fontSize: 13,
+    color: colors.mutedForeground,
+    fontWeight: '500',
+  },
+  detailValue: {
+    fontSize: 13.5,
     fontWeight: '600',
-  },
-  menuValue: {
-    color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '700',
-    flexShrink: 1,
+    color: colors.foreground,
+    maxWidth: '65%',
     textAlign: 'right',
   },
-  divider: {
-    height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+  separator: {
+    marginVertical: 6,
   },
-  primaryBtn: {
-    backgroundColor: '#0284c7',
-    borderRadius: 18,
-    paddingVertical: 8,
-    paddingLeft: 12,
-    paddingRight: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-    minHeight: 56,
-    ...softShadow,
-  },
-  primaryBtnLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
+  actionGroup: {
     gap: 10,
-    paddingRight: 8,
   },
-  primaryBtnIconWrap: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    alignItems: 'center',
-    justifyContent: 'center',
+  primaryActionBtn: {
+    borderRadius: radii.md,
   },
-  primaryBtnText: {
-    color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '800',
-    flexShrink: 1,
+  secondaryActionBtn: {
+    borderRadius: radii.md,
   },
-  primaryBtnArrowCircle: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: 'rgba(255,255,255,0.22)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  guideBtn: {
-    backgroundColor: 'rgba(56, 189, 248, 0.12)',
-    borderRadius: 18,
-    paddingVertical: 13,
-    paddingHorizontal: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.3)',
-  },
-  guideBtnText: {
-    color: '#38bdf8',
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  logoutBtn: {
-    backgroundColor: 'rgba(239, 68, 68, 0.12)',
-    borderRadius: 18,
-    paddingVertical: 13,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.25)',
-  },
-  logoutBtnText: {
-    color: '#f87171',
-    fontSize: 13,
-    fontWeight: '800',
+  signOutBtn: {
+    marginTop: 6,
+    alignSelf: 'center',
   },
 });

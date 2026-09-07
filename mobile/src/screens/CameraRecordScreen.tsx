@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, ActivityIndicator, Alert, Platform, Modal } from 'react-native';
 import { CameraView, useCameraPermissions, useMicrophonePermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
-import { UserRound, ArrowLeft } from 'lucide-react-native';
+import { UserRound, ArrowLeft, Upload } from 'lucide-react-native';
 import { CameraStumpOverlay } from '../components/CameraStumpOverlay';
 import { PitchCreaseOverlay } from '../components/PitchCreaseOverlay';
 import { uploadVideoForAnalysis, detectBatsmanInFrame, pollForAnalysisResult, PollStatusUpdate } from '../services/api';
@@ -406,19 +406,30 @@ export const CameraRecordScreen: React.FC<CameraRecordScreenProps> = ({
         </View>
       ) : (
         <View style={styles.controlsBar}>
-          <TouchableOpacity style={styles.flipButton} onPress={toggleCameraFacing}>
-            <Text style={styles.flipButtonText}>🔄 FLIP</Text>
-          </TouchableOpacity>
+          {/* Left spacer for perfect horizontal shutter centering */}
+          <View style={styles.controlsSideSpacer} />
 
+          {/* iPhone Shutter Record Button */}
           <TouchableOpacity
             style={[styles.recordButton, isRecording && styles.recordButtonActive]}
             onPress={handleToggleRecord}
+            activeOpacity={0.82}
+            accessibilityLabel={isRecording ? 'Stop Recording' : 'Start Recording'}
           >
             <View style={[styles.innerRecordDot, isRecording && styles.innerRecordDotActive]} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.galleryButton} onPress={handlePickGalleryVideo}>
-            <Text style={styles.galleryButtonText}>📁 UPLOAD</Text>
+          {/* iPhone Frosted Glass Upload Button */}
+          <TouchableOpacity
+            style={styles.glassUploadButton}
+            onPress={handlePickGalleryVideo}
+            activeOpacity={0.72}
+            accessibilityLabel="Upload Video"
+          >
+            <View style={styles.glassUploadIconCircle}>
+              <Upload size={22} color="#ffffff" strokeWidth={2.4} />
+            </View>
+            <Text style={styles.glassUploadLabel}>Upload</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -688,100 +699,89 @@ const styles = StyleSheet.create({
   },
   controlsBar: {
     position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 98 : 84,
+    bottom: Platform.OS === 'ios' ? 96 : 82,
     left: 0,
     right: 0,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 38,
     zIndex: 20,
   },
-  bottomNavBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
+  controlsSideSpacer: {
+    width: 56,
+    height: 56,
+  },
+  glassUploadButton: {
     alignItems: 'center',
-    backgroundColor: 'rgba(2, 6, 23, 0.95)',
-    borderTopWidth: 1,
-    borderTopColor: '#1e293b',
-    paddingTop: 10,
-    paddingBottom: 14,
-    paddingHorizontal: 12,
-    zIndex: 25,
+    justifyContent: 'center',
+    width: 56,
   },
-  bottomNavItem: {
+  glassUploadIconCircle: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: 'rgba(255, 255, 255, 0.22)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.42)',
     alignItems: 'center',
-    minWidth: 72,
-    gap: 4,
+    justifyContent: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
+      },
+      android: {
+        elevation: 6,
+      },
+    }),
   },
-  bottomNavIcon: {
-    fontSize: 22,
-  },
-  bottomNavLabel: {
-    color: '#e2e8f0',
+  glassUploadLabel: {
+    color: '#ffffff',
     fontSize: 10,
     fontWeight: '700',
-  },
-  bottomNavLabelSignOut: {
-    color: '#fca5a5',
-  },
-  flipButton: {
-    position: 'absolute',
-    left: 24,
-    backgroundColor: 'rgba(10, 18, 36, 0.8)',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 22,
-    borderWidth: 1.2,
-    borderColor: 'rgba(56, 189, 248, 0.3)',
-  },
-  flipButtonText: {
-    color: '#38bdf8',
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  galleryButton: {
-    position: 'absolute',
-    right: 24,
-    backgroundColor: 'rgba(10, 18, 36, 0.8)',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 22,
-    borderWidth: 1.2,
-    borderColor: 'rgba(56, 189, 248, 0.3)',
-  },
-  galleryButtonText: {
-    color: '#38bdf8',
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
+    marginTop: 4,
+    textShadowColor: 'rgba(0, 0, 0, 0.65)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   recordButton: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
-    borderWidth: 3.5,
+    width: 78,
+    height: 78,
+    borderRadius: 39,
+    borderWidth: 4,
     borderColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.35,
+        shadowRadius: 10,
+      },
+      android: {
+        elevation: 6,
+      },
+    }),
   },
   recordButtonActive: {
-    borderColor: '#ef4444',
+    borderColor: '#ffffff',
+    backgroundColor: 'rgba(239, 68, 68, 0.25)',
   },
   innerRecordDot: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     backgroundColor: '#ef4444',
   },
   innerRecordDotActive: {
-    width: 32,
-    height: 32,
+    width: 28,
+    height: 28,
     borderRadius: 6,
     backgroundColor: '#ef4444',
   },

@@ -10,6 +10,7 @@ import { ProfileScreen } from './src/screens/ProfileScreen';
 import { SignOutScreen } from './src/screens/SignOutScreen';
 import { AppBottomNav, TabName } from './src/components/AppBottomNav';
 import { markOnboardingDone, restoreAuthSession } from './src/services/api';
+import { colors } from './src/theme';
 
 type AppScreen = 'LOADING' | 'GUIDE' | 'AUTH' | 'RECORD' | 'ANALYSIS' | 'HISTORY' | 'PROFILE' | 'SIGN_OUT';
 
@@ -118,7 +119,7 @@ export default function App() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
+      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
       <View style={styles.mainContent}>
         {currentScreen === 'GUIDE' ? (
           <ModernOnboardingScreen onComplete={handleOnboardingComplete} />
@@ -193,7 +194,7 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: colors.background,
   },
   mainContent: {
     flex: 1,

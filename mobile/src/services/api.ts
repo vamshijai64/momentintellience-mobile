@@ -233,9 +233,17 @@ export const getOverlayVideoUrl = (overlayPath: string): string => {
   if (overlayPath.startsWith('http://') || overlayPath.startsWith('https://')) {
     return overlayPath;
   }
-  const cleanPath = overlayPath.startsWith('/') ? overlayPath : `/${overlayPath}`;
-  const host = API_BASE_URL.replace('/api/v1', '');
-  return `${host}${cleanPath}`;
+  // Normalize Windows backslashes
+  let clean = overlayPath.replace(/\\/g, '/');
+  if (!clean.startsWith('/')) {
+    clean = `/${clean}`;
+  }
+  // Ensure /media prefix if path refers to processed/ or uploads/ or does not have /media/
+  if (!clean.startsWith('/media/')) {
+    clean = `/media${clean}`;
+  }
+  const host = API_BASE_URL.replace(/\/api\/v1\/?$/, '');
+  return `${host}${clean}`;
 };
 
 export const uploadVideoForAnalysis = async (

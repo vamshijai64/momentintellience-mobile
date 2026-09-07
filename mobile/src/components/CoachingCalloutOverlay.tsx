@@ -445,26 +445,34 @@ export function extractBodyAnchors(
 ): BodyAnchors | undefined {
   if (!landmarkFrames || landmarkFrames.length === 0) return undefined;
 
-  const idx = Math.min(
-    landmarkFrames.length - 1,
-    Math.max(0, Math.floor(progressRatio * landmarkFrames.length))
-  );
-  const frame = landmarkFrames[idx];
-  const list: any[] = Array.isArray(frame)
-    ? frame
-    : Array.isArray(frame?.landmarks)
-      ? frame.landmarks
-      : Array.isArray(frame?.points)
-        ? frame.points
-        : [];
+  let list: any[] = [];
+  // Case A: landmarkFrames is directly a list of landmark objects [{ id: 0, x, y }, ...]
+  if (
+    Array.isArray(landmarkFrames) &&
+    landmarkFrames.length > 0 &&
+    (typeof landmarkFrames[0]?.id === 'number' || typeof landmarkFrames[0]?.x === 'number')
+  ) {
+    list = landmarkFrames;
+  } else {
+    const idx = Math.min(
+      landmarkFrames.length - 1,
+      Math.max(0, Math.floor(progressRatio * landmarkFrames.length))
+    );
+    const frame = landmarkFrames[idx];
+    list = Array.isArray(frame)
+      ? frame
+      : Array.isArray(frame?.landmarks)
+        ? frame.landmarks
+        : Array.isArray(frame?.points)
+          ? frame.points
+          : [];
 
-  if (!list.length) {
-    // Sometimes the frame itself is a name→{x,y} map
-    if (frame && typeof frame === 'object' && !Array.isArray(frame)) {
+    if (!list.length && frame && typeof frame === 'object' && !Array.isArray(frame)) {
       return anchorsFromNamedMap(frame);
     }
-    return undefined;
   }
+
+  if (!list.length) return undefined;
 
   const byName = (names: string[]) => {
     const hit = list.find((p) => {
@@ -479,14 +487,14 @@ export function extractBodyAnchors(
     return toPoint(hit);
   };
 
-  // MediaPipe Pose indices: nose=0, L elbow=13, R elbow=14, L wrist=15, R wrist=16, L ankle=27, R ankle=28
-  const head = byName(['nose', 'head']) || byIndex([0]);
-  const leadElbow = byName(['left_elbow', 'left elbow']) || byIndex([13]);
-  const leadWrist = byName(['left_wrist', 'left wrist']) || byIndex([15]);
-  const leftAnkle = byName(['left_ankle', 'left ankle']) || byIndex([27]);
-  const rightAnkle = byName(['right_ankle', 'right ankle']) || byIndex([28]);
+  // MediaPipe Pose indices: nose=0, L elbow=13, R elbow=14, L wrist=15, R wrist=16, L ankle=27, R ankle=28, L toe=31, R toe=32
+  const head = byName(['nose', 'head']) || byIndex([0]) || (list.length > 0 ? toPoint(list[0]) : undefined);
+  const leadElbow = byName(['left_elbow', 'left elbow']) || byIndex([13]) || (list.length > 13 ? toPoint(list[13]) : undefined);
+  const leadWrist = byName(['left_wrist', 'left wrist']) || byIndex([15]) || (list.length > 15 ? toPoint(list[15]) : undefined);
+  const leftAnkle = byName(['left_ankle', 'left ankle', 'left_foot']) || byIndex([27, 31]) || (list.length > 27 ? toPoint(list[27]) : undefined);
+  const rightAnkle = byName(['right_ankle', 'right ankle', 'right_foot']) || byIndex([28, 32]) || (list.length > 28 ? toPoint(list[28]) : undefined);
 
-  if (!head && !leadElbow && !leftAnkle) return undefined;
+  if (!head && !leadElbow && !leftAnkle && !rightAnkle) return undefined;
 
   return {
     head: head || undefined,

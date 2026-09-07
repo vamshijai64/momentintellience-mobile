@@ -18,6 +18,7 @@ import {
   BodyAnchors,
 } from './CoachingCalloutOverlay';
 import { BeforeAfterFootOverlay } from './BeforeAfterFootOverlay';
+import { HeadAlignmentPlumbLineOverlay } from './HeadAlignmentPlumbLineOverlay';
 
 export type StrokePhase = 'STANCE' | 'BACKLIFT' | 'IMPACT' | 'FINISH';
 
@@ -29,6 +30,7 @@ export type PlayerPlaybackSnapshot = {
 
 export interface BroadcastInVideoPlayerProps {
   videoUri?: string;
+  cleanVideoUri?: string;
   isLoading?: boolean;
   leadElbowAngle?: number;
   kneeFlexionAngle?: number;
@@ -56,6 +58,7 @@ const FULLSCREEN_BOTTOM_INSET = Platform.OS === 'ios' ? 8 : 8;
 
 export const BroadcastInVideoPlayer: React.FC<BroadcastInVideoPlayerProps> = ({
   videoUri,
+  cleanVideoUri,
   isLoading = false,
   leadElbowAngle = 142,
   kneeFlexionAngle = 136,
@@ -88,6 +91,9 @@ export const BroadcastInVideoPlayer: React.FC<BroadcastInVideoPlayerProps> = ({
   const [showGhostOverlay, setShowGhostOverlay] = useState<boolean>(false);
   const [ghostOpacity, setGhostOpacity] = useState<number>(0.65);
   const [showTelemetryCard, setShowTelemetryCard] = useState<boolean>(false);
+  const [showHeadPlumbLine, setShowHeadPlumbLine] = useState<boolean>(false);
+  const prevCoachCuesRef = useRef<boolean>(true);
+  const prevHudRef = useRef<boolean>(false);
   const [internalCoachCues, setInternalCoachCues] = useState<boolean>(false);
   const showCoachCues = coachCuesEnabled ?? internalCoachCues;
   const setShowCoachCues = (next: boolean) => {
@@ -151,8 +157,24 @@ export const BroadcastInVideoPlayer: React.FC<BroadcastInVideoPlayerProps> = ({
     }
   }, [progressRatio, impactFrameRatio, flashAnim]);
 
+  const prevActiveUriRef = useRef<string>('');
+  const pendingSeekPosRef = useRef<number | null>(null);
+
   const handlePlaybackStatusUpdate = async (status: AVPlaybackStatus) => {
     if (!status.isLoaded) return;
+
+    // After switching between clean and annotated video, seek back to the exact frame timestamp
+    if (pendingSeekPosRef.current !== null && pendingSeekPosRef.current > 0) {
+      const targetMillis = pendingSeekPosRef.current;
+      pendingSeekPosRef.current = null;
+      try {
+        await videoRef.current?.setStatusAsync({
+          positionMillis: Math.floor(targetMillis),
+          shouldPlay: isPlaying,
+        });
+      } catch {}
+      return;
+    }
 
     // After Expand remounts the Video, seek once to the saved timestamp.
     if (!didResumeRef.current && resumePlayback && resumePlayback.positionMillis > 0) {
@@ -284,6 +306,47 @@ export const BroadcastInVideoPlayer: React.FC<BroadcastInVideoPlayerProps> = ({
   const kneeColor = getStatusColor(liveFrontKnee, 125, 165);
   const rearKneeColor = getStatusColor(liveRearKnee, 125, 165);
 
+  // Switch to clean video whenever Plumb or Cues is active, keeping the batsman clean without raw MediaPipe skeleton lines
+  const shouldUseCleanVideo = Boolean((showHeadPlumbLine || showCoachCues) && cleanVideoUri);
+  const activeVideoUri: string = shouldUseCleanVideo ? cleanVideoUri! : (videoUri || '');
+
+  useEffect(() => {
+    if (prevActiveUriRef.current && prevActiveUriRef.current !== activeVideoUri) {
+      pendingSeekPosRef.current = positionMillis;
+    }
+    prevActiveUriRef.current = activeVideoUri;
+  }, [activeVideoUri, positionMillis]);
+
+  const handleToggleCoachCues = () => {
+    const next = !showCoachCues;
+    if (next) {
+      if (showHeadPlumbLine) {
+        setShowHeadPlumbLine(false);
+      }
+      setShowCoachCues(true);
+    } else {
+      setShowCoachCues(false);
+    }
+  };
+
+  const handleTogglePlumbLine = () => {
+    const next = !showHeadPlumbLine;
+    if (next) {
+      // 1. Remember previous states and turn off other overlays
+      prevCoachCuesRef.current = showCoachCues;
+      prevHudRef.current = showHudOverlays;
+      setShowCoachCues(false);
+      setShowHudOverlays(false);
+      setShowHeadPlumbLine(true);
+      jumpToPhase('IMPACT');
+    } else {
+      // 2. Disable plumb and automatically restore MediaPipe lines & cues
+      setShowHeadPlumbLine(false);
+      setShowCoachCues(prevCoachCuesRef.current ?? true);
+      setShowHudOverlays(prevHudRef.current ?? false);
+    }
+  };
+
   return (
     <View
       style={[
@@ -304,7 +367,7 @@ export const BroadcastInVideoPlayer: React.FC<BroadcastInVideoPlayerProps> = ({
           <>
             <Video
               ref={videoRef}
-              source={{ uri: videoUri }}
+              source={{ uri: activeVideoUri }}
               style={StyleSheet.absoluteFillObject}
               resizeMode={ResizeMode.CONTAIN}
               isLooping
@@ -339,7 +402,7 @@ export const BroadcastInVideoPlayer: React.FC<BroadcastInVideoPlayerProps> = ({
               coachingTip={coachingTip}
               anchors={liveAnchors}
               videoAspect={videoAspect}
-              visible={showCoachCues && !isLoading}
+              visible={showCoachCues && !showHeadPlumbLine && !isLoading}
             />
 
             {/* Before / After foot box + ring (Instagram-style coaching still) */}
@@ -347,10 +410,18 @@ export const BroadcastInVideoPlayer: React.FC<BroadcastInVideoPlayerProps> = ({
               phase={cuePhase}
               anchors={liveAnchors}
               videoAspect={videoAspect}
-              visible={showCoachCues && !isLoading}
+              visible={showCoachCues && !showHeadPlumbLine && !isLoading}
               isPositive={
                 liveFrontKnee >= 125 && liveFrontKnee <= 165 && liveLeadElbow >= 110 && liveLeadElbow <= 155
               }
+            />
+
+            {/* ⚖️ Head Alignment Plumb Line Overlay (Yellow 90° reference vs Blue Actual Head) */}
+            <HeadAlignmentPlumbLineOverlay
+              visible={showHeadPlumbLine && !isLoading}
+              anchors={liveAnchors}
+              videoAspect={videoAspect}
+              shotType={shotType}
             />
           </>
         ) : (
@@ -377,20 +448,42 @@ export const BroadcastInVideoPlayer: React.FC<BroadcastInVideoPlayerProps> = ({
             {/* Top Quick Actions (HUD toggle, Angles toggle, Fullscreen) */}
             <View style={styles.topRightActions}>
               <TouchableOpacity
-                style={[styles.hudToggleBtn, showCoachCues && styles.hudToggleBtnActive]}
-                onPress={() => setShowCoachCues(!showCoachCues)}
+                style={[styles.hudToggleBtn, showCoachCues && styles.hudToggleBtnCuesActive]}
+                onPress={handleToggleCoachCues}
                 activeOpacity={0.7}
               >
-                <Text style={styles.hudToggleText}>Cues</Text>
+                {showCoachCues && <View style={[styles.miniDot, { backgroundColor: '#38bdf8' }]} />}
+                <Text style={[styles.hudToggleText, showCoachCues && styles.hudToggleTextActive]}>Cues</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.hudToggleBtn, showHudOverlays && styles.hudToggleBtnActive]}
+                style={[styles.hudToggleBtn, showHudOverlays && styles.hudToggleBtnHudActive]}
                 onPress={() => setShowHudOverlays(!showHudOverlays)}
                 activeOpacity={0.7}
               >
-                <Text style={styles.hudToggleText}>
+                {showHudOverlays && <View style={[styles.miniDot, { backgroundColor: '#34d399' }]} />}
+                <Text style={[styles.hudToggleText, showHudOverlays && styles.hudToggleTextActive]}>
                   {showHudOverlays ? 'HUD' : 'Clean'}
+                </Text>
+              </TouchableOpacity>
+
+              {/* ⚖️ Plumb Line Button (Kohli vs Actual Head Alignment) */}
+              <TouchableOpacity
+                style={[
+                  styles.hudToggleBtn,
+                  showHeadPlumbLine && styles.hudToggleBtnPlumbActive,
+                ]}
+                onPress={handleTogglePlumbLine}
+                activeOpacity={0.7}
+              >
+                {showHeadPlumbLine && <View style={[styles.miniDot, { backgroundColor: '#fbbf24' }]} />}
+                <Text
+                  style={[
+                    styles.hudToggleText,
+                    showHeadPlumbLine && styles.hudToggleTextPlumbActive,
+                  ]}
+                >
+                  ⚖️ Plumb
                 </Text>
               </TouchableOpacity>
 
@@ -400,7 +493,8 @@ export const BroadcastInVideoPlayer: React.FC<BroadcastInVideoPlayerProps> = ({
                   onPress={() => setShowAngleTags(!showAngleTags)}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.hudToggleText}>{showAngleTags ? 'Angles' : 'Angles'}</Text>
+                  {showAngleTags && <View style={[styles.miniDot, { backgroundColor: '#38bdf8' }]} />}
+                  <Text style={[styles.hudToggleText, showAngleTags && styles.hudToggleTextActive]}>Angles</Text>
                 </TouchableOpacity>
               )}
 
@@ -409,6 +503,7 @@ export const BroadcastInVideoPlayer: React.FC<BroadcastInVideoPlayerProps> = ({
                 onPress={() => jumpToPhase('IMPACT')}
                 activeOpacity={0.7}
               >
+                <View style={[styles.miniDot, { backgroundColor: '#f87171' }]} />
                 <Text style={styles.impactJumpText}>Impact</Text>
               </TouchableOpacity>
 
@@ -419,7 +514,7 @@ export const BroadcastInVideoPlayer: React.FC<BroadcastInVideoPlayerProps> = ({
                   activeOpacity={0.7}
                 >
                   <Text style={styles.fullscreenBtnText}>
-                    {isFullscreen ? 'Close' : 'Expand'}
+                    {isFullscreen ? '✕ Close' : '⤢ Expand'}
                   </Text>
                 </TouchableOpacity>
               )}
@@ -428,7 +523,7 @@ export const BroadcastInVideoPlayer: React.FC<BroadcastInVideoPlayerProps> = ({
         )}
 
         {/* 🌟 OVERLAY LAYER 2: Floating Biomechanical Joint Angle Tags */}
-        {!isLoading && showHudOverlays && showAngleTags && (
+        {!isLoading && showHudOverlays && showAngleTags && !showHeadPlumbLine && (
           <View style={styles.anglesOverlayLayer} pointerEvents="none">
             {/* 1. Lead Elbow Angle Tag (Top-Left) */}
             <View style={[styles.angleTag, { borderColor: leadElbowColor, top: 48, left: 10 }]}>
@@ -792,36 +887,66 @@ const styles = StyleSheet.create({
   topRightActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    flexWrap: 'wrap',
+    justifyContent: 'flex-end',
+    gap: 4,
   },
   hudToggleBtn: {
-    backgroundColor: 'rgba(30, 41, 59, 0.82)',
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(15, 23, 42, 0.82)',
+    paddingHorizontal: 7,
+    paddingVertical: 4.5,
+    borderRadius: 999,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderColor: 'rgba(255, 255, 255, 0.14)',
+    gap: 3.5,
   },
   hudToggleBtnActive: {
-    backgroundColor: 'rgba(2, 132, 199, 0.9)',
-    borderColor: '#7dd3fc',
+    backgroundColor: 'rgba(2, 132, 199, 0.85)',
+    borderColor: '#38bdf8',
+  },
+  hudToggleBtnCuesActive: {
+    backgroundColor: 'rgba(14, 116, 144, 0.85)',
+    borderColor: '#38bdf8',
+  },
+  hudToggleBtnHudActive: {
+    backgroundColor: 'rgba(6, 78, 59, 0.85)',
+    borderColor: '#34d399',
+  },
+  hudToggleBtnPlumbActive: {
+    backgroundColor: 'rgba(120, 53, 15, 0.90)',
+    borderColor: '#fbbf24',
   },
   hudToggleText: {
-    color: '#ffffff',
-    fontSize: 11,
+    color: '#cbd5e1',
+    fontSize: 10.5,
     fontWeight: '600',
+  },
+  hudToggleTextActive: {
+    color: '#ffffff',
+    fontWeight: '700',
+  },
+  hudToggleTextPlumbActive: {
+    color: '#fef08a',
+    fontWeight: '700',
+  },
+  miniDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
   },
   fullscreenBtn: {
     backgroundColor: 'rgba(15, 23, 42, 0.85)',
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4.5,
+    borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#38bdf8',
+    borderColor: 'rgba(56, 189, 248, 0.45)',
   },
   fullscreenBtnText: {
     color: '#7dd3fc',
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: '600',
   },
   anglesOverlayLayer: {
@@ -1065,16 +1190,17 @@ const styles = StyleSheet.create({
   impactJumpBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(127, 29, 29, 0.92)',
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderRadius: 8,
+    backgroundColor: 'rgba(127, 29, 29, 0.85)',
+    paddingVertical: 4.5,
+    paddingHorizontal: 7,
+    borderRadius: 999,
     borderWidth: 1,
     borderColor: '#ef4444',
+    gap: 3.5,
   },
   impactJumpText: {
     color: '#fecaca',
-    fontSize: 10,
+    fontSize: 10.5,
     fontWeight: '700',
   },
   speedSelectorBar: {

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Platform } from 'react-native';
+import { colors, radii, shadows } from '../theme';
 
 export interface TechniqueCheckpoint {
   id: string;
@@ -245,13 +246,13 @@ const cardShadow = Platform.select({
 
 const styles = StyleSheet.create({
   cardContainer: {
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
+    backgroundColor: colors.card,
+    borderRadius: radii.xl,
     padding: 16,
-    borderWidth: 1.5,
-    borderColor: '#e2e8f0',
+    borderWidth: 1,
+    borderColor: colors.border,
     marginVertical: 10,
-    ...cardShadow,
+    ...shadows.sm,
   },
   headerRow: {
     flexDirection: 'row',
@@ -268,7 +269,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 6,
+    borderRadius: radii.xs,
     gap: 5,
     marginBottom: 4,
   },
@@ -283,44 +284,45 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
   },
   title: {
-    color: '#0f172a',
+    color: colors.foreground,
     fontSize: 15,
-    fontWeight: '900',
-    letterSpacing: 0.5,
+    fontWeight: '800',
+    letterSpacing: -0.2,
   },
   subtitle: {
-    color: '#0284c7',
+    color: colors.accent,
     fontSize: 10.5,
     fontWeight: '700',
     letterSpacing: 0.4,
     marginTop: 1,
   },
   scoreBox: {
-    width: 54,
-    height: 54,
-    borderRadius: 14,
-    borderWidth: 2,
-    backgroundColor: '#f8fafc',
+    width: 52,
+    height: 52,
+    borderRadius: radii.md,
+    borderWidth: 1.5,
+    backgroundColor: colors.muted,
     alignItems: 'center',
     justifyContent: 'center',
   },
   scoreValue: {
     fontSize: 17,
     fontWeight: '900',
+    letterSpacing: -0.3,
   },
   scoreSub: {
     fontSize: 8,
     fontWeight: '800',
-    color: '#64748b',
+    color: colors.mutedForeground,
     marginTop: -2,
   },
   accuracyMeterBox: {
-    backgroundColor: '#f8fafc',
+    backgroundColor: colors.muted,
     padding: 10,
-    borderRadius: 12,
+    borderRadius: radii.md,
     marginBottom: 14,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: colors.border,
   },
   accuracyLabels: {
     flexDirection: 'row',

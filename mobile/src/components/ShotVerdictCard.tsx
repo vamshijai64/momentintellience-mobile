@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, View, Text, Platform } from 'react-native';
 import { ShotVerdict } from '../types';
+import { colors, radii, shadows } from '../theme';
 
 interface ShotVerdictCardProps {
   verdict?: ShotVerdict;
@@ -9,15 +10,15 @@ interface ShotVerdictCardProps {
 const RADIUS = 74;
 
 const VERDICT_THEME: Record<string, { bg: string; text: string; border: string; label: string; icon: string }> = {
-  GOOD_SHOT: { bg: '#dcfce7', text: '#15803d', border: '#10b981', label: 'GOOD SHOT', icon: '✓' },
-  AVERAGE_SHOT: { bg: '#fef3c7', text: '#b45309', border: '#f59e0b', label: 'AVERAGE SHOT', icon: '~' },
-  BAD_SHOT: { bg: '#fee2e2', text: '#b91c1c', border: '#ef4444', label: 'NEEDS WORK', icon: '!' },
+  GOOD_SHOT: { bg: colors.successSoft, text: colors.successText, border: colors.successBorder, label: 'GOOD SHOT', icon: '✓' },
+  AVERAGE_SHOT: { bg: colors.warningSoft, text: colors.warningText, border: colors.warningBorder, label: 'AVERAGE SHOT', icon: '~' },
+  BAD_SHOT: { bg: colors.destructiveSoft, text: colors.destructiveText, border: colors.destructiveBorder, label: 'NEEDS WORK', icon: '!' },
 };
 
 const CONFIDENCE_THEME: Record<string, { text: string; label: string }> = {
-  HIGH: { text: '#15803d', label: 'High Confidence' },
-  MEDIUM: { text: '#b45309', label: 'Medium Confidence' },
-  LOW: { text: '#b91c1c', label: 'Low Confidence' },
+  HIGH: { text: colors.successText, label: 'High Confidence' },
+  MEDIUM: { text: colors.warningText, label: 'Medium Confidence' },
+  LOW: { text: colors.destructiveText, label: 'Low Confidence' },
 };
 
 export const ShotVerdictCard: React.FC<ShotVerdictCardProps> = ({ verdict }) => {
@@ -99,13 +100,13 @@ const cardShadow = Platform.select({
 
 const styles = StyleSheet.create({
   cardContainer: {
-    backgroundColor: '#ffffff',
-    borderRadius: 22,
-    padding: 20,
-    borderWidth: 1.5,
-    borderColor: '#e2e8f0',
+    backgroundColor: colors.card,
+    borderRadius: radii.xl,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
     marginVertical: 10,
-    ...cardShadow,
+    ...shadows.sm,
   },
   heroRow: {
     flexDirection: 'row',
@@ -119,37 +120,38 @@ const styles = StyleSheet.create({
     paddingRight: 12,
   },
   verdictIconCircle: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    borderWidth: 2,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
   },
   verdictIconText: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '800',
   },
   heroTextCol: {
     flexShrink: 1,
   },
   badgeEyebrow: {
-    color: '#64748b',
+    color: colors.mutedForeground,
     fontSize: 10,
     fontWeight: '700',
-    letterSpacing: 1.2,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
     marginBottom: 3,
   },
   badgeLabel: {
-    fontSize: 19,
+    fontSize: 18,
     fontWeight: '800',
-    letterSpacing: 0.2,
+    letterSpacing: -0.2,
   },
   confidenceRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 5,
+    marginTop: 4,
   },
   confidenceDot: {
     width: 6,
@@ -158,74 +160,76 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   confidenceText: {
-    fontSize: 10.5,
-    fontWeight: '700',
-    letterSpacing: 0.3,
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.1,
   },
   scoreRing: {
-    width: 66,
-    height: 66,
-    borderRadius: 33,
-    borderWidth: 3,
+    width: 62,
+    height: 62,
+    borderRadius: 31,
+    borderWidth: 2.5,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f8fafc',
+    backgroundColor: colors.muted,
   },
   scoreRingValue: {
     fontSize: 20,
     fontWeight: '800',
+    letterSpacing: -0.5,
   },
   scoreRingLabel: {
-    color: '#64748b',
+    color: colors.mutedForeground,
     fontSize: 7.5,
     fontWeight: '700',
-    letterSpacing: 0.5,
+    letterSpacing: 0.6,
     marginTop: 1,
   },
   reasonBox: {
-    backgroundColor: '#f1f5f9',
-    borderRadius: 12,
+    backgroundColor: colors.muted,
+    borderRadius: radii.md,
     padding: 12,
-    marginTop: 16,
+    marginTop: 14,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: colors.border,
   },
   reasonText: {
-    color: '#334155',
+    color: colors.foreground,
     fontSize: 13,
-    lineHeight: 19,
+    lineHeight: 18.5,
     fontWeight: '500',
   },
   subScoreRow: {
     flexDirection: 'row',
-    marginTop: 14,
+    marginTop: 12,
     gap: 10,
   },
   subScoreCard: {
     flex: 1,
-    backgroundColor: '#f8fafc',
-    borderRadius: 14,
+    backgroundColor: colors.muted,
+    borderRadius: radii.md,
     paddingVertical: 12,
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: colors.border,
   },
   subScoreLabel: {
-    color: '#64748b',
-    fontSize: 10,
+    color: colors.mutedForeground,
+    fontSize: 9.5,
     fontWeight: '700',
     letterSpacing: 0.6,
   },
   subScoreValue: {
-    color: '#0f172a',
-    fontSize: 20,
+    color: colors.foreground,
+    fontSize: 18,
     fontWeight: '800',
-    marginTop: 4,
+    marginTop: 3,
+    letterSpacing: -0.3,
   },
   subScoreTrack: {
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#e2e8f0',
+    backgroundColor: colors.border,
     marginTop: 8,
     overflow: 'hidden',
   },
@@ -235,8 +239,8 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: '#e2e8f0',
-    marginTop: 18,
+    backgroundColor: colors.border,
+    marginTop: 16,
     marginBottom: 4,
   },
   protractorHeader: {

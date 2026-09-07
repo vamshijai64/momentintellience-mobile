@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Animated } from 'react-native';
+import * as Speech from 'expo-speech';
 import { MicCommentaryIcon, GlassIconBadge } from './icons/AppIcons';
 
 interface AICoachVoicePlayerProps {
@@ -11,6 +12,8 @@ interface AICoachVoicePlayerProps {
   leadElbowAngle?: number;
   kneeFlexionAngle?: number;
   shotDirectionLabel?: string;
+  headOverFootOk?: boolean;
+  tiltDegrees?: number;
   reason?: string;
   commentaryText?: string;
 }
@@ -24,6 +27,8 @@ export const AICoachVoicePlayer: React.FC<AICoachVoicePlayerProps> = ({
   leadElbowAngle = 138,
   kneeFlexionAngle = 132,
   shotDirectionLabel = 'COVER',
+  headOverFootOk = true,
+  tiltDegrees,
   reason,
   commentaryText,
 }) => {
@@ -41,12 +46,24 @@ export const AICoachVoicePlayer: React.FC<AICoachVoicePlayerProps> = ({
   // Clean human-friendly verdict name
   const cleanVerdict = verdictLabel.replace(/_/g, ' ').toUpperCase();
 
+  // Dynamic Head Plumb Line coach commentary
+  let headComment = '';
+  if (typeof tiltDegrees === 'number') {
+    headComment = tiltDegrees <= 3.8
+      ? `Your head was stacked directly on the 90 degree plumb line like Virat Kohli. `
+      : `Your head was tilted ${tiltDegrees} degrees off the vertical plumb line. Shift your chin over your front foot. `;
+  } else if (typeof headOverFootOk === 'boolean') {
+    headComment = headOverFootOk
+      ? `Your head was stacked directly over the front foot on the plumb line. `
+      : `Your head tilted off-axis away from the front foot at impact. `;
+  }
+
   // Dynamically constructed commentary that perfectly matches the scorecard numbers on screen
   const defaultVoiceScript = commentaryText || (
     `${cleanVerdict}! You played a ${shotType} with an overall AI score of ${Math.round(score)} percent. ` +
-    `Your technique scored ${Math.round(techniqueScore)} percent and execution scored ${Math.round(executionScore)} percent. ` +
-    `Lead front elbow was at ${Math.round(leadElbowAngle)} degrees, directing the stroke through ${shotDirectionLabel}. ` +
-    (reason ? `${reason}` : `Keep your head locked over the front knee to maximize power and control.`)
+    (leadElbowAngle ? `Lead front elbow reached ${Math.round(leadElbowAngle)} degrees. ` : '') +
+    headComment +
+    (reason ? `${reason}. ` : 'Focus on repeating this balance setup on your next ball.')
   );
 
   useEffect(() => {
@@ -84,36 +101,28 @@ export const AICoachVoicePlayer: React.FC<AICoachVoicePlayerProps> = ({
     };
   }, [isPlaying]);
 
+  useEffect(() => {
+    return () => {
+      try {
+        Speech.stop();
+      } catch {}
+    };
+  }, []);
+
   const toggleSpeech = () => {
     try {
-      let Speech: any = null;
-      try {
-        Speech = require('expo-speech');
-      } catch (e) {
-        Speech = null;
-      }
-
       if (isPlaying) {
-        if (Speech && Speech.stop) {
-          Speech.stop();
-        }
+        Speech.stop();
         setIsPlaying(false);
       } else {
         setIsPlaying(true);
-        if (Speech && Speech.speak) {
-          Speech.speak(defaultVoiceScript, {
-            rate: 0.95,
-            pitch: 1.0,
-            onDone: () => setIsPlaying(false),
-            onStopped: () => setIsPlaying(false),
-            onError: () => setIsPlaying(false),
-          });
-        } else {
-          // Fallback simulation timer if TTS module is linking
-          setTimeout(() => {
-            setIsPlaying(false);
-          }, 8000);
-        }
+        Speech.speak(defaultVoiceScript, {
+          rate: 0.95,
+          pitch: 1.0,
+          onDone: () => setIsPlaying(false),
+          onStopped: () => setIsPlaying(false),
+          onError: () => setIsPlaying(false),
+        });
       }
     } catch (err) {
       console.warn('Speech playback error', err);

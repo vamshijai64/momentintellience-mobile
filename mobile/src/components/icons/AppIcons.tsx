@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Image, ImageStyle, StyleProp } from 'react-native';
 import Svg, { Path, Circle, Rect, Line, Polyline, Polygon, G, Defs, LinearGradient, Stop } from 'react-native-svg';
 
 interface IconProps {
@@ -337,3 +337,37 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
   },
 });
+
+/** 19. Athletix Official Brand Logo Asset */
+export const AthletixBrandLogo: React.FC<{
+  width?: number;
+  height?: number;
+  style?: StyleProp<ImageStyle>;
+}> = ({ width = 140, height = 48, style }) => (
+  <Image
+    source={require('../../../assets/athletx.png')}
+    style={[{ width, height }, style]}
+    resizeMode="contain"
+  />
+);
+
+/** 20. Athletix App Icon Badge (Rounded square or circle) */
+export const AthletixBrandIcon: React.FC<{
+  size?: number;
+  rounded?: boolean;
+  style?: StyleProp<ImageStyle>;
+}> = ({ size = 36, rounded = false, style }) => (
+  <Image
+    source={require('../../../assets/athletx.png')}
+    style={[
+      {
+        width: size,
+        height: size,
+        borderRadius: rounded ? size / 2 : 8,
+      },
+      style,
+    ]}
+    resizeMode="contain"
+  />
+);
+

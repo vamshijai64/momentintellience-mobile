@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
 import * as VideoThumbnails from 'expo-video-thumbnails';
+import * as FileSystem from 'expo-file-system';
 import { Play, Trash2, ChevronLeft } from 'lucide-react-native';
 import {
   getCurrentUser,
@@ -22,11 +23,12 @@ import {
   isGuestEmail,
   ShotHistoryItem,
 } from '../services/api';
+import { colors, radii, shadows } from '../theme';
 
-const ACCENT = '#0284c7';
-const ACCENT_SOFT = '#e0f2fe';
-const DANGER = '#dc2626';
-const DANGER_SOFT = '#fee2e2';
+const ACCENT = colors.accent;
+const ACCENT_SOFT = colors.accentSoft;
+const DANGER = colors.destructive;
+const DANGER_SOFT = colors.destructiveSoft;
 
 interface ShotHistoryScreenProps {
   onBack?: () => void;
@@ -109,61 +111,127 @@ const ThumbnailPlayBadge = () => (
   </View>
 );
 
+const thumbMemoryCache = new Map<string, string>();
+
+const extractThumbnail = async (videoUrl: string, videoId: string): Promise<string | null> => {
+  if (!videoUrl || !videoId) return null;
+
+  // 1. In-memory cache
+  if (thumbMemoryCache.has(videoId)) {
+    return thumbMemoryCache.get(videoId)!;
+  }
+
+  // 2. Local disk cache (persistent across re-renders & app sessions)
+  const cacheFile = `${FileSystem.cacheDirectory}shot_thumb_${videoId}.jpg`;
+  try {
+    const info = await FileSystem.getInfoAsync(cacheFile);
+    if (info.exists && info.size && info.size > 0) {
+      thumbMemoryCache.set(videoId, cacheFile);
+      return cacheFile;
+    }
+  } catch {}
+
+  // 3. Direct extraction (fast path via expo-video-thumbnails)
+  try {
+    const result = await VideoThumbnails.getThumbnailAsync(videoUrl, {
+      time: 200,
+      quality: 0.7,
+    });
+    if (result?.uri) {
+      try {
+        await FileSystem.copyAsync({ from: result.uri, to: cacheFile });
+        thumbMemoryCache.set(videoId, cacheFile);
+        return cacheFile;
+      } catch {
+        thumbMemoryCache.set(videoId, result.uri);
+        return result.uri;
+      }
+    }
+  } catch (directErr) {
+    // Direct extraction on Android can fail on remote HTTP streaming URLs
+  }
+
+  // 4. Download video slice to local cache then extract (100% reliable on Android)
+  const tempVideo = `${FileSystem.cacheDirectory}temp_vid_${videoId}.mp4`;
+  try {
+    const dlResult = await FileSystem.downloadAsync(videoUrl, tempVideo);
+    if (dlResult?.uri) {
+      const result = await VideoThumbnails.getThumbnailAsync(dlResult.uri, {
+        time: 200,
+        quality: 0.7,
+      });
+      // Delete temporary download to free storage
+      FileSystem.deleteAsync(tempVideo, { idempotent: true }).catch(() => {});
+      if (result?.uri) {
+        try {
+          await FileSystem.copyAsync({ from: result.uri, to: cacheFile });
+          thumbMemoryCache.set(videoId, cacheFile);
+          return cacheFile;
+        } catch {
+          thumbMemoryCache.set(videoId, result.uri);
+          return result.uri;
+        }
+      }
+    }
+  } catch (dlErr) {
+    FileSystem.deleteAsync(tempVideo, { idempotent: true }).catch(() => {});
+  }
+
+  return null;
+};
+
 const HistoryThumbnail: React.FC<{
   overlayPath?: string;
   thumbnailUrl?: string;
+  videoId: string;
   verdict?: string;
-}> = ({ overlayPath, thumbnailUrl }) => {
+}> = ({ overlayPath, thumbnailUrl, videoId, verdict }) => {
   const videoUrl = overlayPath ? getOverlayVideoUrl(overlayPath) : '';
   const remoteThumb = thumbnailUrl ? getOverlayVideoUrl(thumbnailUrl) : '';
-  const [thumbUri, setThumbUri] = useState<string>(remoteThumb);
+  const initialThumb = remoteThumb || thumbMemoryCache.get(videoId) || '';
+  const [thumbUri, setThumbUri] = useState<string>(initialThumb);
+  const [isLoading, setIsLoading] = useState<boolean>(!initialThumb && !!videoUrl);
   const [failed, setFailed] = useState(false);
-  const videoRef = useRef<Video>(null);
-  const didSeekRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
     setFailed(false);
-    didSeekRef.current = false;
 
     if (remoteThumb) {
       setThumbUri(remoteThumb);
-      return () => {
-        cancelled = true;
-      };
+      setIsLoading(false);
+      return () => { cancelled = true; };
+    }
+
+    if (thumbMemoryCache.has(videoId)) {
+      setThumbUri(thumbMemoryCache.get(videoId)!);
+      setIsLoading(false);
+      return () => { cancelled = true; };
     }
 
     if (!videoUrl) {
-      setThumbUri('');
-      return () => {
-        cancelled = true;
-      };
+      setIsLoading(false);
+      return () => { cancelled = true; };
     }
 
-    setThumbUri('');
-    (async () => {
-      try {
-        const result = await VideoThumbnails.getThumbnailAsync(videoUrl, {
-          time: 600,
-          quality: 0.6,
-        });
-        if (!cancelled && result?.uri) {
-          setThumbUri(result.uri);
-        }
-      } catch (err) {
-        console.log('History thumbnail extract failed', err);
+    setIsLoading(true);
+    extractThumbnail(videoUrl, videoId).then((uri) => {
+      if (cancelled) return;
+      if (uri) {
+        setThumbUri(uri);
+        setFailed(false);
+      } else {
+        setFailed(true);
       }
-    })();
+      setIsLoading(false);
+    });
 
     return () => {
       cancelled = true;
     };
-  }, [videoUrl, remoteThumb]);
+  }, [videoUrl, remoteThumb, videoId]);
 
-  const showImage = !!thumbUri && !failed;
-  const showVideoFallback = !showImage && !!videoUrl && !failed;
-
-  if (showImage) {
+  if (thumbUri && !failed) {
     return (
       <View style={styles.thumbnailWrap}>
         <Image
@@ -177,31 +245,10 @@ const HistoryThumbnail: React.FC<{
     );
   }
 
-  if (showVideoFallback) {
+  if (isLoading) {
     return (
-      <View style={styles.thumbnailWrap}>
-        <Video
-          ref={videoRef}
-          source={{ uri: videoUrl }}
-          style={styles.thumbnailVideo}
-          resizeMode={ResizeMode.COVER}
-          shouldPlay={false}
-          isMuted
-          useNativeControls={false}
-          pointerEvents="none"
-          onLoad={async (status: AVPlaybackStatus) => {
-            if (!status.isLoaded || !videoRef.current || didSeekRef.current) return;
-            didSeekRef.current = true;
-            const target = Math.min(500, Math.max(200, Math.floor((status.durationMillis || 1000) * 0.15)));
-            try {
-              await videoRef.current.setPositionAsync(target);
-            } catch {
-              // ignore seek errors on list recycle
-            }
-          }}
-          onError={() => setFailed(true)}
-        />
-        <ThumbnailPlayBadge />
+      <View style={[styles.thumbnailWrap, styles.thumbnailLoading]}>
+        <ActivityIndicator size="small" color={colors.primary} />
       </View>
     );
   }
@@ -218,6 +265,7 @@ const HistoryRow: React.FC<{
   item: ShotHistoryItem;
   onSelect?: (videoId: string) => void;
   onRequestDelete?: (item: ShotHistoryItem) => void;
+  accountKey?: string;
 }> = ({ item, onSelect, onRequestDelete }) => {
   const theme = item.verdict ? VERDICT_THEME[item.verdict] : null;
   const timeStr = new Date(item.created_at).toLocaleTimeString(undefined, {
@@ -236,6 +284,7 @@ const HistoryRow: React.FC<{
         <HistoryThumbnail
           overlayPath={item.overlay_video_path || item.overlay_video_url}
           thumbnailUrl={item.thumbnail_url}
+          videoId={item.video_id}
           verdict={item.verdict}
         />
 
@@ -557,11 +606,11 @@ export const ShotHistoryScreen: React.FC<ShotHistoryScreenProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: colors.background,
   },
   contentContainer: {
     padding: 16,
-    paddingTop: 44,
+    paddingTop: Platform.OS === 'ios' ? 48 : 36,
     paddingBottom: 110,
   },
   headerBar: {
@@ -573,101 +622,106 @@ const styles = StyleSheet.create({
   backButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
-    paddingLeft: 6,
-    paddingRight: 10,
+    backgroundColor: colors.card,
+    paddingLeft: 8,
+    paddingRight: 12,
     paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 1.5,
-    borderColor: '#e2e8f0',
-    gap: 2,
+    borderRadius: radii.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: 3,
+    ...shadows.sm,
   },
   backButtonText: {
-    color: '#0284c7',
-    fontSize: 11,
-    fontWeight: 'bold',
+    color: colors.foreground,
+    fontSize: 12,
+    fontWeight: '600',
   },
   headerTitle: {
-    color: '#0f172a',
-    fontSize: 14,
-    fontWeight: 'bold',
-    letterSpacing: 0.5,
+    color: colors.foreground,
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: -0.2,
   },
   signOutHeaderBtn: {
-    backgroundColor: '#fee2e2',
-    paddingHorizontal: 10,
+    backgroundColor: colors.destructiveSoft,
+    paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 1.5,
-    borderColor: '#fca5a5',
+    borderRadius: radii.full,
+    borderWidth: 1,
+    borderColor: colors.destructiveBorder,
   },
   signOutHeaderText: {
-    color: '#dc2626',
-    fontSize: 10.5,
-    fontWeight: '800',
-    letterSpacing: 0.3,
+    color: colors.destructiveText,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
   headerSub: {
-    color: '#64748b',
-    fontSize: 11,
-    marginBottom: 12,
-    lineHeight: 16,
+    color: colors.mutedForeground,
+    fontSize: 12,
+    marginBottom: 14,
+    lineHeight: 17,
   },
   todayBanner: {
-    backgroundColor: '#dcfce7',
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: '#bbf7d0',
+    backgroundColor: colors.card,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
     padding: 14,
     marginBottom: 14,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    ...shadows.sm,
   },
   todayBannerTitle: {
-    color: '#15803d',
+    color: colors.foreground,
     fontSize: 13,
-    fontWeight: '800',
-  },
-  todayBannerText: {
-    color: '#166534',
-    fontSize: 12,
     fontWeight: '700',
   },
+  todayBannerText: {
+    color: colors.mutedForeground,
+    fontSize: 12,
+    fontWeight: '600',
+  },
   daySection: {
-    marginBottom: 18,
+    marginBottom: 20,
   },
   dayHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 8,
-    paddingHorizontal: 2,
+    paddingHorizontal: 4,
   },
   dayHeaderTitle: {
-    color: '#0f172a',
+    color: colors.foreground,
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '700',
+    letterSpacing: -0.1,
   },
   dayHeaderCount: {
-    color: '#64748b',
-    fontSize: 10,
-    fontWeight: '700',
+    color: colors.mutedForeground,
+    fontSize: 11,
+    fontWeight: '600',
   },
   statsCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: '#e2e8f0',
+    backgroundColor: colors.card,
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
     padding: 16,
-    marginBottom: 16,
+    marginBottom: 18,
+    ...shadows.sm,
   },
   statsEyebrow: {
-    color: '#0284c7',
-    fontSize: 9,
-    fontWeight: 'bold',
-    letterSpacing: 1,
-    marginBottom: 10,
+    color: colors.mutedForeground,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    marginBottom: 12,
   },
   statsRow: {
     flexDirection: 'row',
@@ -678,18 +732,20 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: '800',
+    color: colors.foreground,
+    letterSpacing: -0.5,
   },
   statLabel: {
-    color: '#64748b',
-    fontSize: 9,
-    fontWeight: 'bold',
+    color: colors.mutedForeground,
+    fontSize: 10,
+    fontWeight: '700',
     marginTop: 2,
-    letterSpacing: 0.5,
+    letterSpacing: 0.4,
   },
   trendText: {
-    color: '#334155',
-    fontSize: 11,
+    color: colors.mutedForeground,
+    fontSize: 11.5,
     textAlign: 'center',
     marginTop: 12,
   },
@@ -698,12 +754,12 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
   },
   loadingText: {
-    color: '#64748b',
-    fontSize: 11,
+    color: colors.mutedForeground,
+    fontSize: 12,
     marginTop: 10,
   },
   errorText: {
-    color: '#ef4444',
+    color: colors.destructive,
     fontSize: 12,
     textAlign: 'center',
     marginTop: 24,
@@ -712,42 +768,43 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 36,
     paddingHorizontal: 20,
-    backgroundColor: '#ffffff',
-    borderRadius: 18,
-    borderWidth: 1.5,
-    borderColor: '#e2e8f0',
+    backgroundColor: colors.card,
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
     marginTop: 10,
+    ...shadows.sm,
   },
   emptyIcon: {
     fontSize: 36,
     marginBottom: 8,
   },
   emptyText: {
-    color: '#0f172a',
+    color: colors.foreground,
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '700',
     textAlign: 'center',
   },
   emptySubText: {
-    color: '#64748b',
-    fontSize: 11.5,
+    color: colors.mutedForeground,
+    fontSize: 12,
     marginTop: 6,
     textAlign: 'center',
-    lineHeight: 17,
+    lineHeight: 18,
     paddingHorizontal: 8,
   },
   emptyRecordBtn: {
-    backgroundColor: '#0284c7',
-    paddingHorizontal: 16,
+    backgroundColor: colors.primary,
+    paddingHorizontal: 18,
     paddingVertical: 10,
-    borderRadius: 12,
+    borderRadius: radii.md,
     marginTop: 16,
   },
   emptyRecordBtnText: {
-    color: '#ffffff',
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.5,
+    color: colors.primaryForeground,
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
   historyRow: {
     position: 'relative',
@@ -757,40 +814,32 @@ const styles = StyleSheet.create({
   historyRowPress: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: '#e2e8f0',
-    padding: 10,
-    gap: 10,
+    backgroundColor: colors.card,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 11,
+    gap: 12,
+    ...shadows.sm,
   },
   deleteOverlayBtn: {
     position: 'absolute',
-    top: -10,
-    right: -10,
+    top: -6,
+    right: -6,
     zIndex: 20,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#ffffff',
-    borderWidth: 1.5,
-    borderColor: '#e2e8f0',
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.12,
-        shadowRadius: 3,
-      },
-      android: { elevation: 2 },
-      default: {},
-    }),
+    ...shadows.sm,
   },
   deleteModalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 28,
@@ -798,56 +847,48 @@ const styles = StyleSheet.create({
   deleteModalCard: {
     width: '100%',
     maxWidth: 360,
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
+    backgroundColor: colors.card,
+    borderRadius: radii.xxl,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: colors.border,
     paddingHorizontal: 22,
     paddingTop: 22,
     paddingBottom: 18,
     alignItems: 'center',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#0f172a',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.18,
-        shadowRadius: 24,
-      },
-      android: { elevation: 8 },
-      default: {},
-    }),
+    ...shadows.lg,
   },
   deleteIconWrap: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: DANGER_SOFT,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.destructiveSoft,
     borderWidth: 1,
-    borderColor: '#fecaca',
+    borderColor: colors.destructiveBorder,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 14,
   },
   deleteModalTitle: {
-    color: '#0f172a',
-    fontSize: 18,
-    fontWeight: '800',
+    color: colors.foreground,
+    fontSize: 17,
+    fontWeight: '700',
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 6,
+    letterSpacing: -0.2,
   },
   deleteModalBody: {
-    color: '#64748b',
-    fontSize: 14,
-    lineHeight: 21,
+    color: colors.mutedForeground,
+    fontSize: 13,
+    lineHeight: 19,
     textAlign: 'center',
     marginBottom: 8,
   },
   deleteModalShotName: {
-    color: ACCENT,
+    color: colors.foreground,
     fontWeight: '700',
   },
   deleteModalError: {
-    color: DANGER,
+    color: colors.destructive,
     fontSize: 12,
     fontWeight: '600',
     textAlign: 'center',
@@ -857,27 +898,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     width: '100%',
     gap: 10,
-    marginTop: 10,
+    marginTop: 12,
   },
   deleteCancelBtn: {
     flex: 1,
-    backgroundColor: ACCENT_SOFT,
-    borderRadius: 14,
-    paddingVertical: 13,
+    backgroundColor: colors.secondary,
+    borderRadius: radii.md,
+    paddingVertical: 12,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#bae6fd',
+    borderColor: colors.border,
   },
   deleteCancelText: {
-    color: ACCENT,
-    fontSize: 14,
-    fontWeight: '700',
+    color: colors.foreground,
+    fontSize: 13.5,
+    fontWeight: '600',
   },
   deleteConfirmBtn: {
     flex: 1,
-    backgroundColor: DANGER,
-    borderRadius: 14,
-    paddingVertical: 13,
+    backgroundColor: colors.destructive,
+    borderRadius: radii.md,
+    paddingVertical: 12,
     alignItems: 'center',
   },
   deleteConfirmBtnDisabled: {
@@ -885,15 +926,20 @@ const styles = StyleSheet.create({
   },
   deleteConfirmText: {
     color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 13.5,
+    fontWeight: '600',
   },
   thumbnailWrap: {
-    width: 64,
-    height: 64,
-    borderRadius: 10,
+    width: 58,
+    height: 58,
+    borderRadius: radii.md,
     overflow: 'hidden',
-    backgroundColor: '#f1f5f9',
+    backgroundColor: colors.muted,
+  },
+  thumbnailLoading: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.muted,
   },
   thumbnailVideo: {
     width: '100%',
@@ -903,13 +949,13 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.12)',
+    backgroundColor: 'rgba(0, 0, 0, 0.15)',
   },
   thumbnailPlayBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(0, 0, 0, 0.28)',
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: 'rgba(0, 0, 0, 0.35)',
     borderWidth: 1.5,
     borderColor: 'rgba(255, 255, 255, 0.9)',
     alignItems: 'center',
@@ -919,14 +965,14 @@ const styles = StyleSheet.create({
   thumbnailFallback: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#1e293b',
+    backgroundColor: colors.muted,
   },
   thumbnailFallbackGlow: {
     position: 'absolute',
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
   },
   historyRowMain: {
     flex: 1,
@@ -938,40 +984,41 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   historyRowTitle: {
-    color: '#0f172a',
-    fontSize: 13,
-    fontWeight: 'bold',
+    color: colors.foreground,
+    fontSize: 13.5,
+    fontWeight: '700',
     flexShrink: 1,
+    letterSpacing: -0.1,
   },
   multiBadge: {
-    backgroundColor: '#f1f5f9',
-    borderRadius: 6,
+    backgroundColor: colors.muted,
+    borderRadius: radii.xs,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: colors.border,
   },
   multiBadgeText: {
-    color: '#64748b',
-    fontSize: 9,
-    fontWeight: 'bold',
+    color: colors.mutedForeground,
+    fontSize: 9.5,
+    fontWeight: '600',
   },
   historyRowSub: {
-    color: '#64748b',
-    fontSize: 10,
-    marginTop: 3,
+    color: colors.mutedForeground,
+    fontSize: 11,
+    marginTop: 2,
   },
   verdictPill: {
     alignSelf: 'flex-start',
-    borderRadius: 6,
-    paddingHorizontal: 6,
+    borderRadius: radii.full,
+    paddingHorizontal: 8,
     paddingVertical: 2,
-    marginTop: 5,
+    marginTop: 6,
   },
   verdictPillText: {
-    fontSize: 9,
-    fontWeight: 'bold',
-    letterSpacing: 0.3,
+    fontSize: 9.5,
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
   scoreCol: {
     alignItems: 'flex-end',
@@ -979,18 +1026,20 @@ const styles = StyleSheet.create({
   },
   historyRowScore: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: '800',
+    letterSpacing: -0.5,
   },
   scoreLabel: {
-    color: '#64748b',
-    fontSize: 8,
-    fontWeight: 'bold',
-    letterSpacing: 0.5,
+    color: colors.mutedForeground,
+    fontSize: 8.5,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
     marginTop: 1,
   },
   replayHint: {
-    color: '#0284c7',
-    fontSize: 11,
-    fontWeight: 'bold',
+    color: colors.accent,
+    fontSize: 11.5,
+    fontWeight: '700',
   },
 });

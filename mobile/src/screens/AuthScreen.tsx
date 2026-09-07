@@ -3,9 +3,6 @@ import {
   StyleSheet,
   View,
   Text,
-  TextInput,
-  TouchableOpacity,
-  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -14,16 +11,17 @@ import {
   Image,
 } from 'react-native';
 import { ensureGuestSession, loginUser, registerUser } from '../services/api';
-import { ArrowRight } from 'lucide-react-native';
+import { ArrowRight, Mail, Lock, User } from 'lucide-react-native';
+import { colors, radii } from '../theme';
+import { Card, CardContent } from '../components/ui/Card';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { TabsList, TabsTrigger } from '../components/ui/Tabs';
 
 interface AuthScreenProps {
   onAuthSuccess: (email?: string) => void;
   onSkipGuest: () => void;
 }
-
-const ACCENT = '#0284c7';
-const ACCENT_SOFT = '#e0f2fe';
-const ACCENT_DEEP = '#0369a1';
 
 /** FastAPI may return detail as string OR array/object — never show [object Object]. */
 const formatAuthError = (error: any, fallback: string): string => {
@@ -131,15 +129,14 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onSkipGue
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <StatusBar barStyle="dark-content" backgroundColor="#faf9f6" />
-      <View style={styles.blobTL} />
-      <View style={styles.blobTR} />
+      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
 
       <ScrollView
         contentContainerStyle={styles.contentContainer}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+        {/* Header Branding */}
         <View style={styles.headerBox}>
           <View style={styles.logoWrap}>
             <Image
@@ -148,268 +145,162 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onSkipGue
               resizeMode="contain"
             />
           </View>
+          <Text style={styles.appTitle}>Athletix</Text>
           <Text style={styles.appSub}>
-            Sign in once — your shots stay saved in History even after you close the app
+            Sign in to sync your swing analysis, coaching drills, and shot history.
           </Text>
         </View>
 
-        <View style={styles.tabContainer}>
-          <TouchableOpacity
-            style={[styles.tabBtn, isLogin && styles.tabBtnActive]}
-            onPress={() => setIsLogin(true)}
-            activeOpacity={0.85}
-          >
-            <Text style={[styles.tabText, isLogin && styles.tabTextActive]}>Sign in</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tabBtn, !isLogin && styles.tabBtnActive]}
-            onPress={() => setIsLogin(false)}
-            activeOpacity={0.85}
-          >
-            <Text style={[styles.tabText, !isLogin && styles.tabTextActive]}>Register</Text>
-          </TouchableOpacity>
+        {/* Tab Switcher (Shadcn Segmented Control) */}
+        <View style={styles.tabsWrapper}>
+          <TabsList>
+            <TabsTrigger
+              value="login"
+              activeValue={isLogin ? 'login' : 'register'}
+              onPress={() => setIsLogin(true)}
+            >
+              Sign In
+            </TabsTrigger>
+            <TabsTrigger
+              value="register"
+              activeValue={isLogin ? 'login' : 'register'}
+              onPress={() => setIsLogin(false)}
+            >
+              Create Account
+            </TabsTrigger>
+          </TabsList>
         </View>
 
-        <View style={styles.formCard}>
-          {!isLogin && (
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Full name</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g. Vishal Sharma"
-                placeholderTextColor="#94a3b8"
+        {/* Form Card */}
+        <Card style={styles.formCard}>
+          <CardContent>
+            {!isLogin && (
+              <Input
+                label="Full name"
+                placeholder="e.g. Virat Kohli"
                 value={fullName}
                 onChangeText={setFullName}
                 autoCapitalize="words"
+                iconLeft={<User size={16} color={colors.mutedForeground} />}
               />
-            </View>
-          )}
+            )}
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Email</Text>
-            <TextInput
-              style={styles.input}
+            <Input
+              label="Email address"
               placeholder="you@email.com"
-              placeholderTextColor="#94a3b8"
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
+              iconLeft={<Mail size={16} color={colors.mutedForeground} />}
             />
-          </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Password</Text>
-            <TextInput
-              style={styles.input}
+            <Input
+              label="Password"
               placeholder="••••••••"
-              placeholderTextColor="#94a3b8"
               value={password}
               onChangeText={setPassword}
               secureTextEntry
+              iconLeft={<Lock size={16} color={colors.mutedForeground} />}
+              helperText={!isLogin ? 'At least 6 characters' : undefined}
             />
-          </View>
 
-          <TouchableOpacity
-            style={styles.submitBtn}
-            onPress={handleSubmit}
-            disabled={loading}
-            activeOpacity={0.88}
-          >
-            {loading ? (
-              <ActivityIndicator color="#ffffff" />
-            ) : (
-              <>
-                <Text style={styles.submitBtnText}>
-                  {isLogin ? 'Sign in' : 'Create account'}
-                </Text>
-                <View style={styles.arrowCircle}>
-                  <ArrowRight size={18} color="#ffffff" strokeWidth={2.6} />
-                </View>
-              </>
-            )}
-          </TouchableOpacity>
-        </View>
+            <Button
+              variant="default"
+              size="lg"
+              loading={loading}
+              onPress={handleSubmit}
+              style={styles.submitBtn}
+              iconRight={<ArrowRight size={17} color={colors.primaryForeground} strokeWidth={2.4} />}
+            >
+              {isLogin ? 'Sign In' : 'Create Account'}
+            </Button>
+          </CardContent>
+        </Card>
 
-        <TouchableOpacity
-          style={styles.guestBtn}
+        {/* Guest mode button */}
+        <Button
+          variant="outline"
+          size="default"
           onPress={handleContinueAsGuest}
           disabled={loading}
-          activeOpacity={0.8}
+          style={styles.guestBtn}
         >
-          <Text style={styles.guestBtnText}>Continue as guest</Text>
-        </TouchableOpacity>
+          Continue as Guest
+        </Button>
 
         <Text style={styles.footerHint}>
-          Guest mode also saves history on this phone. Sign in to keep it across devices.
+          Guest mode stores your sessions locally on this device.
         </Text>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 };
 
-const softShadow = Platform.select({
-  ios: {
-    shadowColor: '#0f172a',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.07,
-    shadowRadius: 16,
-  },
-  android: { elevation: 3 },
-  default: {},
-});
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#faf9f6',
-  },
-  blobTL: {
-    position: 'absolute',
-    top: -70,
-    left: -60,
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: '#99f6e4',
-    opacity: 0.45,
-  },
-  blobTR: {
-    position: 'absolute',
-    top: 80,
-    right: -80,
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-    backgroundColor: '#fef3c7',
-    opacity: 0.4,
+    backgroundColor: colors.background,
   },
   contentContainer: {
-    padding: 28,
-    paddingTop: Platform.OS === 'ios' ? 56 : 40,
+    paddingHorizontal: 22,
+    paddingTop: Platform.OS === 'ios' ? 60 : 44,
     paddingBottom: 40,
   },
   headerBox: {
     alignItems: 'center',
-    marginBottom: 28,
+    marginBottom: 26,
   },
   logoWrap: {
     backgroundColor: '#000000',
-    borderRadius: 16,
+    borderRadius: radii.lg,
     paddingHorizontal: 16,
     paddingVertical: 10,
-    marginBottom: 14,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   brandLogo: {
-    width: 180,
-    height: 100,
+    width: 170,
+    height: 80,
+  },
+  appTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: colors.foreground,
+    letterSpacing: -0.4,
+    marginBottom: 6,
   },
   appSub: {
-    color: '#64748b',
-    fontSize: 14,
+    color: colors.mutedForeground,
+    fontSize: 13.5,
     textAlign: 'center',
-    lineHeight: 20,
-    paddingHorizontal: 12,
+    lineHeight: 19,
+    paddingHorizontal: 16,
   },
-  tabContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 5,
-    marginBottom: 18,
-    ...softShadow,
-  },
-  tabBtn: {
-    flex: 1,
-    paddingVertical: 12,
-    alignItems: 'center',
-    borderRadius: 12,
-  },
-  tabBtnActive: {
-    backgroundColor: ACCENT,
-  },
-  tabText: {
-    color: '#64748b',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  tabTextActive: {
-    color: '#ffffff',
-  },
-  formCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 24,
-    padding: 22,
-    ...softShadow,
-  },
-  inputGroup: {
+  tabsWrapper: {
     marginBottom: 16,
   },
-  label: {
-    color: '#475569',
-    fontSize: 12,
-    fontWeight: '700',
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: '#f8fafc',
-    color: '#0f172a',
-    fontSize: 15,
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderWidth: 1.5,
-    borderColor: '#e2e8f0',
+  formCard: {
+    padding: 20,
+    borderRadius: radii.xxl,
   },
   submitBtn: {
-    backgroundColor: ACCENT,
-    paddingVertical: 8,
-    paddingLeft: 20,
-    paddingRight: 8,
-    borderRadius: 18,
-    marginTop: 6,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    minHeight: 58,
-  },
-  submitBtnText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  arrowCircle: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: 'rgba(255,255,255,0.22)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    marginTop: 8,
+    borderRadius: radii.md,
   },
   guestBtn: {
-    marginTop: 22,
+    marginTop: 20,
     alignSelf: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 999,
-    backgroundColor: '#ffffff',
-    borderWidth: 1.5,
-    borderColor: '#e2e8f0',
-    minWidth: 180,
-    alignItems: 'center',
-  },
-  guestBtnText: {
-    color: ACCENT_DEEP,
-    fontSize: 14,
-    fontWeight: '700',
+    borderRadius: radii.full,
+    paddingHorizontal: 24,
   },
   footerHint: {
     marginTop: 14,
     textAlign: 'center',
-    color: '#94a3b8',
+    color: colors.mutedForeground,
     fontSize: 12,
-    fontWeight: '600',
-    lineHeight: 17,
-    paddingHorizontal: 8,
+    lineHeight: 16,
+    paddingHorizontal: 16,
   },
 });
