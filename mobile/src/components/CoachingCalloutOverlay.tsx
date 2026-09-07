@@ -156,7 +156,7 @@ function clamp01(n: number) {
 }
 
 /** Map a point inside the video frame into the letterboxed viewport. */
-function mapToViewport(
+export function mapToViewport(
   nx: number,
   ny: number,
   viewW: number,

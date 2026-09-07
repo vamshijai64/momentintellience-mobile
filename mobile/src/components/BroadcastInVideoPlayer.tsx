@@ -17,6 +17,7 @@ import {
   extractBodyAnchors,
   BodyAnchors,
 } from './CoachingCalloutOverlay';
+import { BeforeAfterFootOverlay } from './BeforeAfterFootOverlay';
 
 export type StrokePhase = 'STANCE' | 'BACKLIFT' | 'IMPACT' | 'FINISH';
 
@@ -339,6 +340,17 @@ export const BroadcastInVideoPlayer: React.FC<BroadcastInVideoPlayerProps> = ({
               anchors={liveAnchors}
               videoAspect={videoAspect}
               visible={showCoachCues && !isLoading}
+            />
+
+            {/* Before / After foot box + ring (Instagram-style coaching still) */}
+            <BeforeAfterFootOverlay
+              phase={cuePhase}
+              anchors={liveAnchors}
+              videoAspect={videoAspect}
+              visible={showCoachCues && !isLoading}
+              isPositive={
+                liveFrontKnee >= 125 && liveFrontKnee <= 165 && liveLeadElbow >= 110 && liveLeadElbow <= 155
+              }
             />
           </>
         ) : (
