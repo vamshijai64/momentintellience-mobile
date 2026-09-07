@@ -8,9 +8,9 @@ import {
   Dimensions,
   Platform,
   Animated,
-  StatusBar,
 } from 'react-native';
 import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
+import { Play, Pause, SkipBack, SkipForward } from 'lucide-react-native';
 import { ProGhostVideoOverlay } from './ProGhostVideoOverlay';
 import {
   CoachingCalloutOverlay,
@@ -51,8 +51,7 @@ export interface BroadcastInVideoPlayerProps {
 }
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const ANDROID_STATUS_TOP = StatusBar.currentHeight ?? 24;
-const FULLSCREEN_BOTTOM_INSET = Platform.OS === 'ios' ? 28 : 16;
+const FULLSCREEN_BOTTOM_INSET = Platform.OS === 'ios' ? 8 : 8;
 
 export const BroadcastInVideoPlayer: React.FC<BroadcastInVideoPlayerProps> = ({
   videoUri,
@@ -393,6 +392,14 @@ export const BroadcastInVideoPlayer: React.FC<BroadcastInVideoPlayerProps> = ({
                 </TouchableOpacity>
               )}
 
+              <TouchableOpacity
+                style={styles.impactJumpBtn}
+                onPress={() => jumpToPhase('IMPACT')}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.impactJumpText}>Impact</Text>
+              </TouchableOpacity>
+
               {onToggleFullscreen && (
                 <TouchableOpacity
                   style={styles.fullscreenBtn}
@@ -487,7 +494,7 @@ export const BroadcastInVideoPlayer: React.FC<BroadcastInVideoPlayerProps> = ({
         >
           {!isPlaying && (
             <View style={styles.pausedIndicator}>
-              <Text style={styles.pausedIcon}>▶</Text>
+              <Play size={28} color="#38bdf8" fill="#38bdf8" strokeWidth={0} />
               <Text style={styles.pausedText}>Paused</Text>
             </View>
           )}
@@ -578,9 +585,9 @@ export const BroadcastInVideoPlayer: React.FC<BroadcastInVideoPlayerProps> = ({
           style={styles.transportBtn}
           onPress={() => stepFrame(-50)}
           activeOpacity={0.7}
+          accessibilityLabel="Step back"
         >
-          <Text style={styles.transportBtnIcon}>⏪</Text>
-          <Text style={styles.transportBtnSub}>−1</Text>
+          <SkipBack size={18} color="#e2e8f0" strokeWidth={2.4} fill="#e2e8f0" />
         </TouchableOpacity>
 
         {/* Jump -0.5s */}
@@ -597,8 +604,15 @@ export const BroadcastInVideoPlayer: React.FC<BroadcastInVideoPlayerProps> = ({
           style={[styles.playPauseBtn, isPlaying && styles.playPauseBtnActive]}
           onPress={togglePlayPause}
           activeOpacity={0.8}
+          accessibilityLabel={isPlaying ? 'Pause' : 'Play'}
         >
-          <Text style={styles.playPauseIcon}>{isPlaying ? '⏸' : '▶'}</Text>
+          {isPlaying ? (
+            <Pause size={22} color="#ffffff" fill="#ffffff" strokeWidth={2} />
+          ) : (
+            <View style={{ marginLeft: 2 }}>
+              <Play size={22} color="#ffffff" fill="#ffffff" strokeWidth={2} />
+            </View>
+          )}
         </TouchableOpacity>
 
         {/* Jump +0.5s */}
@@ -615,22 +629,13 @@ export const BroadcastInVideoPlayer: React.FC<BroadcastInVideoPlayerProps> = ({
           style={styles.transportBtn}
           onPress={() => stepFrame(50)}
           activeOpacity={0.7}
+          accessibilityLabel="Step forward"
         >
-          <Text style={styles.transportBtnIcon}>⏩</Text>
-          <Text style={styles.transportBtnSub}>+1</Text>
-        </TouchableOpacity>
-
-        {/* Direct Jump to Impact Moment */}
-        <TouchableOpacity
-          style={styles.impactJumpBtn}
-          onPress={() => jumpToPhase('IMPACT')}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.impactJumpText}>Impact</Text>
+          <SkipForward size={18} color="#e2e8f0" strokeWidth={2.4} fill="#e2e8f0" />
         </TouchableOpacity>
       </View>
 
-      {/* 🌟 SECTION 4: Slow-Motion Speed Selector Bar */}
+      {/* Speed controls */}
       <View style={styles.speedSelectorBar}>
         <Text style={styles.speedBarLabel}>Speed</Text>
         <View style={styles.speedPillsGroup}>
@@ -744,7 +749,8 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   topOverlayBarFullscreen: {
-    top: Platform.OS === 'ios' ? 54 : ANDROID_STATUS_TOP + 10,
+    // Modal already pads for the status bar / notch — keep HUD near the top edge of content.
+    top: 10,
     left: 14,
     right: 14,
   },
@@ -883,11 +889,7 @@ const styles = StyleSheet.create({
     borderRadius: 36,
     borderWidth: 1.5,
     borderColor: '#38bdf8',
-  },
-  pausedIcon: {
-    color: '#38bdf8',
-    fontSize: 24,
-    marginLeft: 3,
+    gap: 2,
   },
   pausedText: {
     color: '#e2e8f0',
@@ -1004,31 +1006,25 @@ const styles = StyleSheet.create({
   transportControlsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     backgroundColor: '#0b1120',
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderTopWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.06)',
+    gap: 10,
   },
   transportBtn: {
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#1e293b',
-    paddingVertical: 5,
-    paddingHorizontal: 8,
-    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: '#334155',
-  },
-  transportBtnIcon: {
-    fontSize: 12,
-    color: '#e2e8f0',
-  },
-  transportBtnSub: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#94a3b8',
-    marginTop: 1,
+    minWidth: 40,
+    minHeight: 40,
   },
   transportBtnMini: {
     backgroundColor: '#1e293b',
@@ -1042,9 +1038,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   playPauseBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: '#0284c7',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1054,38 +1050,31 @@ const styles = StyleSheet.create({
   playPauseBtnActive: {
     backgroundColor: '#0369a1',
   },
-  playPauseIcon: {
-    color: '#ffffff',
-    fontSize: 18,
-  },
   impactJumpBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#7f1d1d',
-    paddingVertical: 7,
+    backgroundColor: 'rgba(127, 29, 29, 0.92)',
+    paddingVertical: 5,
     paddingHorizontal: 10,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#ef4444',
-    gap: 3,
-  },
-  impactJumpIcon: {
-    fontSize: 11,
   },
   impactJumpText: {
     color: '#fecaca',
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
   },
   speedSelectorBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     backgroundColor: '#020617',
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderTopWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.05)',
+    gap: 10,
   },
   speedBarLabel: {
     color: '#94a3b8',
@@ -1094,12 +1083,16 @@ const styles = StyleSheet.create({
   },
   speedPillsGroup: {
     flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
     gap: 6,
   },
   speedPill: {
+    flex: 1,
+    alignItems: 'center',
     backgroundColor: '#1e293b',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 7,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: 'transparent',

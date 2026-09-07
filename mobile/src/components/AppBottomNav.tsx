@@ -13,43 +13,40 @@ export const AppBottomNav: React.FC<AppBottomNavProps> = ({ activeTab, onTabPres
   return (
     <View style={styles.floatingWrapper}>
       <View style={styles.glassContainer}>
-        {/* Home / Coach Tab */}
         <TouchableOpacity
-          style={[styles.navItem, activeTab === 'RECORD' && styles.navItemActiveCyan]}
+          style={[styles.navItem, activeTab === 'RECORD' && styles.navItemActive]}
           onPress={() => onTabPress('RECORD')}
           activeOpacity={0.8}
         >
           <GlassHomeIcon size={22} active={activeTab === 'RECORD'} />
-          <Text style={[styles.navLabel, activeTab === 'RECORD' && styles.navLabelActiveCyan]}>
+          <Text style={[styles.navLabel, activeTab === 'RECORD' && styles.navLabelActive]}>
             Coach
           </Text>
-          {activeTab === 'RECORD' && <View style={styles.activeDotCyan} />}
+          {activeTab === 'RECORD' && <View style={styles.activeDot} />}
         </TouchableOpacity>
 
-        {/* History / Kinematics Tab */}
         <TouchableOpacity
-          style={[styles.navItem, activeTab === 'HISTORY' && styles.navItemActiveEmerald]}
+          style={[styles.navItem, activeTab === 'HISTORY' && styles.navItemActive]}
           onPress={() => onTabPress('HISTORY')}
           activeOpacity={0.8}
         >
           <GlassHistoryIcon size={22} active={activeTab === 'HISTORY'} />
-          <Text style={[styles.navLabel, activeTab === 'HISTORY' && styles.navLabelActiveEmerald]}>
+          <Text style={[styles.navLabel, activeTab === 'HISTORY' && styles.navLabelActive]}>
             History
           </Text>
-          {activeTab === 'HISTORY' && <View style={styles.activeDotEmerald} />}
+          {activeTab === 'HISTORY' && <View style={styles.activeDot} />}
         </TouchableOpacity>
 
-        {/* Athlete Profile Tab */}
         <TouchableOpacity
-          style={[styles.navItem, activeTab === 'PROFILE' && styles.navItemActiveGold]}
+          style={[styles.navItem, activeTab === 'PROFILE' && styles.navItemActive]}
           onPress={() => onTabPress('PROFILE')}
           activeOpacity={0.8}
         >
           <GlassProfileIcon size={22} active={activeTab === 'PROFILE'} />
-          <Text style={[styles.navLabel, activeTab === 'PROFILE' && styles.navLabelActiveGold]}>
+          <Text style={[styles.navLabel, activeTab === 'PROFILE' && styles.navLabelActive]}>
             Profile
           </Text>
-          {activeTab === 'PROFILE' && <View style={styles.activeDotGold} />}
+          {activeTab === 'PROFILE' && <View style={styles.activeDot} />}
         </TouchableOpacity>
       </View>
     </View>
@@ -100,20 +97,10 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
     position: 'relative',
   },
-  navItemActiveCyan: {
-    backgroundColor: '#e0f2fe',
-    borderWidth: 1,
-    borderColor: '#bae6fd',
-  },
-  navItemActiveEmerald: {
+  navItemActive: {
     backgroundColor: '#dcfce7',
     borderWidth: 1,
     borderColor: '#bbf7d0',
-  },
-  navItemActiveGold: {
-    backgroundColor: '#fef3c7',
-    borderWidth: 1,
-    borderColor: '#fde68a',
   },
   navLabel: {
     fontSize: 9.5,
@@ -122,40 +109,16 @@ const styles = StyleSheet.create({
     marginTop: 2,
     letterSpacing: 0.3,
   },
-  navLabelActiveCyan: {
-    color: '#0284c7',
-    fontWeight: '900',
-  },
-  navLabelActiveEmerald: {
+  navLabelActive: {
     color: '#15803d',
     fontWeight: '900',
   },
-  navLabelActiveGold: {
-    color: '#b45309',
-    fontWeight: '900',
-  },
-  activeDotCyan: {
-    position: 'absolute',
-    bottom: 3,
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#0284c7',
-  },
-  activeDotEmerald: {
+  activeDot: {
     position: 'absolute',
     bottom: 3,
     width: 4,
     height: 4,
     borderRadius: 2,
     backgroundColor: '#15803d',
-  },
-  activeDotGold: {
-    position: 'absolute',
-    bottom: 3,
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#b45309',
   },
 });

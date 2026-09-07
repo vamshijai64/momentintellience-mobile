@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Modal, Platform } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Modal, Platform, SafeAreaView, StatusBar } from 'react-native';
+import { Share2, ChevronLeft, ArrowLeft } from 'lucide-react-native';
 import { Video, ResizeMode } from 'expo-av';
 import { JointAngleMetricsCard } from '../components/JointAngleMetricsCard';
 import { ShotVerdictCard } from '../components/ShotVerdictCard';
@@ -202,7 +203,8 @@ export const VideoAnalysisScreen: React.FC<VideoAnalysisScreenProps> = ({
           onPress={onBackToCamera}
           activeOpacity={0.7}
         >
-          <Text style={styles.backButtonText}>← Record again</Text>
+          <ArrowLeft size={16} color="#0369a1" strokeWidth={2.6} />
+          <Text style={styles.backButtonText}>Record again</Text>
         </TouchableOpacity>
         <ActivityIndicator size="large" color="#0284c7" />
         <Text style={styles.loadingTitle}>Analyzing your shot</Text>
@@ -216,8 +218,9 @@ export const VideoAnalysisScreen: React.FC<VideoAnalysisScreenProps> = ({
     return (
       <View style={styles.container}>
         <View style={styles.headerBar}>
-          <TouchableOpacity style={styles.backButton} onPress={onBackToCamera}>
-            <Text style={styles.backButtonText}>← Record again</Text>
+          <TouchableOpacity style={styles.backButton} onPress={onBackToCamera} activeOpacity={0.7}>
+            <ArrowLeft size={16} color="#0369a1" strokeWidth={2.6} />
+            <Text style={styles.backButtonText}>Record again</Text>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>SESSION ANALYSIS</Text>
           <View style={{ width: 100 }} />
@@ -254,8 +257,13 @@ export const VideoAnalysisScreen: React.FC<VideoAnalysisScreenProps> = ({
             onPress={shots.length > 1 ? handleBackToSummary : onBackToCamera}
             activeOpacity={0.7}
           >
+            {shots.length > 1 ? (
+              <ChevronLeft size={16} color="#0369a1" strokeWidth={2.6} />
+            ) : (
+              <ArrowLeft size={16} color="#0369a1" strokeWidth={2.6} />
+            )}
             <Text style={styles.backButtonText}>
-              {shots.length > 1 ? '← Summary' : '← Record again'}
+              {shots.length > 1 ? 'Summary' : 'Record again'}
             </Text>
           </TouchableOpacity>
           <View style={styles.headerTitleGroup}>
@@ -268,8 +276,9 @@ export const VideoAnalysisScreen: React.FC<VideoAnalysisScreenProps> = ({
             style={styles.exportHeaderBtn}
             onPress={() => setShowScorecardModal(true)}
             activeOpacity={0.7}
+            accessibilityLabel="Share scorecard"
           >
-            <Text style={styles.exportHeaderIcon}>📤</Text>
+            <Share2 size={18} color="#0284c7" strokeWidth={2.2} />
           </TouchableOpacity>
         </View>
 
@@ -520,29 +529,45 @@ export const VideoAnalysisScreen: React.FC<VideoAnalysisScreenProps> = ({
         <View style={{ height: 90 }} />
       </ScrollView>
 
-      {/* Fullscreen Video Overlay Modal */}
-      <Modal visible={isFullscreen} animationType="fade" statusBarTranslucent onRequestClose={() => setIsFullscreen(false)}>
-        <View style={styles.fullscreenContainer}>
-          <BroadcastInVideoPlayer
-            videoUri={processedVideoUrl}
-            isLoading={isLoading}
-            leadElbowAngle={leftElbowAngle}
-            kneeFlexionAngle={leftKneeAngle}
-            rearKneeAngle={rightKneeAngle}
-            spineAngle={spineAngle}
-            shotType={shotType}
-            impactFrameRatio={calculatedImpactRatio}
-            timeSeriesAngles={timeSeries}
-            landmarkPositions={report?.report_json?.landmark_positions}
-            coachingTip={coachingCue?.cue || coachingCue?.bottom || coachingCue?.bubble}
-            onToggleFullscreen={() => setIsFullscreen(false)}
-            isFullscreen={true}
-            resumePlayback={playbackSnapshot}
-            onPlaybackSnapshot={setPlaybackSnapshot}
-            coachCuesEnabled={coachCuesEnabled}
-            onCoachCuesChange={setCoachCuesEnabled}
-          />
-        </View>
+      {/* Fullscreen Video Overlay Modal — kept inside system safe area */}
+      <Modal
+        visible={isFullscreen}
+        animationType="fade"
+        statusBarTranslucent={false}
+        onRequestClose={() => setIsFullscreen(false)}
+      >
+        <StatusBar barStyle="light-content" backgroundColor="#020617" />
+        <SafeAreaView style={styles.fullscreenSafeArea}>
+          <View
+            style={[
+              styles.fullscreenContainer,
+              Platform.OS === 'android' && {
+                paddingTop: StatusBar.currentHeight ?? 0,
+                paddingBottom: 12,
+              },
+            ]}
+          >
+            <BroadcastInVideoPlayer
+              videoUri={processedVideoUrl}
+              isLoading={isLoading}
+              leadElbowAngle={leftElbowAngle}
+              kneeFlexionAngle={leftKneeAngle}
+              rearKneeAngle={rightKneeAngle}
+              spineAngle={spineAngle}
+              shotType={shotType}
+              impactFrameRatio={calculatedImpactRatio}
+              timeSeriesAngles={timeSeries}
+              landmarkPositions={report?.report_json?.landmark_positions}
+              coachingTip={coachingCue?.cue || coachingCue?.bottom || coachingCue?.bubble}
+              onToggleFullscreen={() => setIsFullscreen(false)}
+              isFullscreen={true}
+              resumePlayback={playbackSnapshot}
+              onPlaybackSnapshot={setPlaybackSnapshot}
+              coachCuesEnabled={coachCuesEnabled}
+              onCoachCuesChange={setCoachCuesEnabled}
+            />
+          </View>
+        </SafeAreaView>
       </Modal>
 
       {/* Shareable Performance Scorecard Modal */}
@@ -660,12 +685,16 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#ffffff',
-    paddingHorizontal: 12,
+    paddingLeft: 8,
+    paddingRight: 12,
     paddingVertical: 8,
     borderRadius: 999,
     borderWidth: 1,
     borderColor: '#e2e8f0',
+    gap: 4,
     ...cardShadow,
   },
   backButtonText: {
@@ -692,16 +721,13 @@ const styles = StyleSheet.create({
   },
   exportHeaderBtn: {
     backgroundColor: '#e0f2fe',
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: '#bae6fd',
-  },
-  exportHeaderIcon: {
-    fontSize: 16,
   },
   tabContainer: {
     flexDirection: 'row',
@@ -892,10 +918,13 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontWeight: '800',
   },
+  fullscreenSafeArea: {
+    flex: 1,
+    backgroundColor: '#020617',
+  },
   fullscreenContainer: {
     flex: 1,
     backgroundColor: '#020617',
-    justifyContent: 'flex-end',
   },
   fullscreenPlaceholder: {
     height: 280,

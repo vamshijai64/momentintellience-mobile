@@ -38,6 +38,7 @@ export interface ShotVerdict {
   composite_score: number;
   shot_direction_deg: number;
   shot_direction_label?: string;
+  shot_type?: string;
   verdict_confidence?: 'LOW' | 'MEDIUM' | 'HIGH';
   impact_frame: number;
   reason: string;

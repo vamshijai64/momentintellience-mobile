@@ -14,6 +14,7 @@ import {
   getShotHistory,
   UserProfile,
 } from '../services/api';
+import { ChevronLeft, ArrowRight, ChartColumn } from 'lucide-react-native';
 
 interface ProfileScreenProps {
   onBack: () => void;
@@ -77,7 +78,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.headerBar}>
           <TouchableOpacity style={styles.backButton} onPress={onBack} activeOpacity={0.8}>
-            <Text style={styles.backArrow}>←</Text>
+            <ChevronLeft size={18} color="#38bdf8" strokeWidth={2.6} />
             <Text style={styles.backText}>Camera</Text>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Player Profile</Text>
@@ -149,8 +150,15 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             </View>
 
             <TouchableOpacity style={styles.primaryBtn} onPress={onViewHistory} activeOpacity={0.88}>
-              <Text style={styles.primaryBtnText}>Open Shot History & Analytics</Text>
-              <Text style={styles.primaryBtnArrow}>→</Text>
+              <View style={styles.primaryBtnLeft}>
+                <View style={styles.primaryBtnIconWrap}>
+                  <ChartColumn size={16} color="#ffffff" strokeWidth={2.4} />
+                </View>
+                <Text style={styles.primaryBtnText}>Open Shot History & Analytics</Text>
+              </View>
+              <View style={styles.primaryBtnArrowCircle}>
+                <ArrowRight size={18} color="#ffffff" strokeWidth={2.6} />
+              </View>
             </TouchableOpacity>
 
             {onViewGuide && (
@@ -218,17 +226,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    paddingHorizontal: 12,
+    paddingLeft: 6,
+    paddingRight: 12,
     paddingVertical: 7,
     borderRadius: 999,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.12)',
-    gap: 6,
-  },
-  backArrow: {
-    color: '#38bdf8',
-    fontSize: 14,
-    fontWeight: '800',
+    gap: 2,
   },
   backText: {
     color: '#e2e8f0',
@@ -397,23 +401,44 @@ const styles = StyleSheet.create({
   primaryBtn: {
     backgroundColor: '#0284c7',
     borderRadius: 18,
-    paddingVertical: 14,
-    paddingHorizontal: 18,
+    paddingVertical: 8,
+    paddingLeft: 12,
+    paddingRight: 8,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 12,
+    minHeight: 56,
     ...softShadow,
+  },
+  primaryBtnLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 10,
+    paddingRight: 8,
+  },
+  primaryBtnIconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   primaryBtnText: {
     color: '#ffffff',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '800',
+    flexShrink: 1,
   },
-  primaryBtnArrow: {
-    color: '#ffffff',
-    fontSize: 18,
-    fontWeight: '800',
+  primaryBtnArrowCircle: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   guideBtn: {
     backgroundColor: 'rgba(56, 189, 248, 0.12)',

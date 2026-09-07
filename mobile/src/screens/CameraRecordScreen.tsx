@@ -1,11 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, ActivityIndicator, Alert, Platform } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, ActivityIndicator, Alert, Platform, Modal } from 'react-native';
 import { CameraView, useCameraPermissions, useMicrophonePermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
+import { UserRound, ArrowLeft } from 'lucide-react-native';
 import { CameraStumpOverlay } from '../components/CameraStumpOverlay';
 import { PitchCreaseOverlay } from '../components/PitchCreaseOverlay';
 import { uploadVideoForAnalysis, detectBatsmanInFrame, pollForAnalysisResult, PollStatusUpdate } from '../services/api';
 import { GlassSparkleAIIcon } from '../components/GlassIcons';
+
+const ACCENT = '#0284c7';
+const ACCENT_SOFT = '#e0f2fe';
+const ACCENT_BORDER = '#bae6fd';
+const NAV_GREEN = '#15803d';
+const NAV_GREEN_SOFT = '#dcfce7';
+const NAV_GREEN_BORDER = '#bbf7d0';
 
 // expo-camera's Android session can only serve one capture mode at a time:
 // takePictureAsync() reliably fails while mode="video". Detection cycles are
@@ -46,6 +54,9 @@ export const CameraRecordScreen: React.FC<CameraRecordScreenProps> = ({
   const [detectionMessage, setDetectionMessage] = useState('Detecting batsman...');
   const [zoomLevel, setZoomLevel] = useState(1.0);
   const [battingStance, setBattingStance] = useState<'AUTO' | 'RIGHT' | 'LEFT'>('AUTO');
+  const [stanceModalVisible, setStanceModalVisible] = useState(false);
+  const [pendingStanceUri, setPendingStanceUri] = useState<string | null>(null);
+  const [stanceModalMode, setStanceModalMode] = useState<'record' | 'gallery'>('record');
   const [cameraMode, setCameraMode] = useState<'video' | 'picture'>('video');
 
   const cameraRef = useRef<any>(null);
@@ -140,35 +151,9 @@ export const CameraRecordScreen: React.FC<CameraRecordScreenProps> = ({
           setIsRecording(false);
           if (recordedVideo && recordedVideo.uri) {
             setLastVideoUri(recordedVideo.uri);
-            // Prompt for stance orientation before uploading
-            Alert.alert(
-              'Select Batting Stance',
-              'Pick the batting hand, or go back and record again.',
-              [
-                {
-                  text: 'Right-hand',
-                  onPress: () => {
-                    setBattingStance('RIGHT');
-                    processRecordedVideo(recordedVideo.uri, 'RIGHT');
-                  },
-                },
-                {
-                  text: 'Left-hand',
-                  onPress: () => {
-                    setBattingStance('LEFT');
-                    processRecordedVideo(recordedVideo.uri, 'LEFT');
-                  },
-                },
-                {
-                  text: '← Record again',
-                  style: 'cancel',
-                  onPress: () => {
-                    setLastVideoUri(null);
-                    setIsRecording(false);
-                  },
-                },
-              ]
-            );
+            setPendingStanceUri(recordedVideo.uri);
+            setStanceModalMode('record');
+            setStanceModalVisible(true);
           }
         } catch (err) {
           console.error('Recording failed to complete', err);
@@ -277,37 +262,30 @@ export const CameraRecordScreen: React.FC<CameraRecordScreenProps> = ({
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const selectedVideoUri = result.assets[0].uri;
         setLastVideoUri(selectedVideoUri);
-
-        Alert.alert(
-          'Who is batting?',
-          'Uploaded videos need the batting hand so shot direction (long off vs third man) is correct.',
-          [
-            {
-              text: 'Right-hand',
-              onPress: () => {
-                setBattingStance('RIGHT');
-                processRecordedVideo(selectedVideoUri, 'RIGHT');
-              },
-            },
-            {
-              text: 'Left-hand',
-              onPress: () => {
-                setBattingStance('LEFT');
-                processRecordedVideo(selectedVideoUri, 'LEFT');
-              },
-            },
-            {
-              text: '← Record again',
-              style: 'cancel',
-              onPress: () => setLastVideoUri(null),
-            },
-          ]
-        );
+        setPendingStanceUri(selectedVideoUri);
+        setStanceModalMode('gallery');
+        setStanceModalVisible(true);
       }
     } catch (err: any) {
       console.error('Failed to pick gallery video', err);
       Alert.alert('Gallery Error', err?.message || 'Could not open video gallery.');
     }
+  };
+
+  const handleStanceSelect = (stance: 'RIGHT' | 'LEFT') => {
+    if (!pendingStanceUri) return;
+    setBattingStance(stance);
+    setStanceModalVisible(false);
+    const uri = pendingStanceUri;
+    setPendingStanceUri(null);
+    processRecordedVideo(uri, stance);
+  };
+
+  const handleStanceCancel = () => {
+    setStanceModalVisible(false);
+    setPendingStanceUri(null);
+    setLastVideoUri(null);
+    setIsRecording(false);
   };
 
   const toggleCameraFacing = () => {
@@ -422,7 +400,8 @@ export const CameraRecordScreen: React.FC<CameraRecordScreenProps> = ({
           </View>
           <Text style={styles.progressPercent}>{Math.round(uploadProgress)}%</Text>
           <TouchableOpacity style={styles.backToRecordBtn} onPress={handleBackToRecord} activeOpacity={0.8}>
-            <Text style={styles.backToRecordBtnText}>← Record again</Text>
+            <ArrowLeft size={16} color="#7dd3fc" strokeWidth={2.6} />
+            <Text style={styles.backToRecordBtnText}>Record again</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -461,6 +440,59 @@ export const CameraRecordScreen: React.FC<CameraRecordScreenProps> = ({
           </View>
         </View>
       )}
+
+      <Modal
+        visible={stanceModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={handleStanceCancel}
+      >
+        <View style={styles.stanceModalBackdrop}>
+          <View style={styles.stanceModalCard}>
+            <View style={styles.stanceModalIconWrap}>
+              <UserRound size={22} color={NAV_GREEN} strokeWidth={2.2} />
+            </View>
+
+            <Text style={styles.stanceModalTitle}>Select batting stance</Text>
+            <Text style={styles.stanceModalBody}>
+              {stanceModalMode === 'gallery'
+                ? 'Pick the batting hand so shot direction (long off vs third man) is correct.'
+                : 'Pick the batting hand, or go back and record again.'}
+            </Text>
+
+            <TouchableOpacity
+              style={styles.stanceChoiceBtn}
+              onPress={() => handleStanceSelect('RIGHT')}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.stanceChoiceBtnText}>Right-hand</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.stanceChoiceBtn}
+              onPress={() => handleStanceSelect('LEFT')}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.stanceChoiceBtnText}>Left-hand</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.stanceCancelBtn}
+              onPress={handleStanceCancel}
+              activeOpacity={0.85}
+            >
+              {stanceModalMode === 'gallery' ? (
+                <Text style={styles.stanceCancelText}>Cancel</Text>
+              ) : (
+                <View style={styles.stanceCancelRow}>
+                  <ArrowLeft size={16} color={ACCENT} strokeWidth={2.6} />
+                  <Text style={styles.stanceCancelText}>Record again</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -767,7 +799,11 @@ const styles = StyleSheet.create({
   },
   backToRecordBtn: {
     marginTop: 22,
-    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingLeft: 14,
+    paddingRight: 20,
     paddingVertical: 12,
     borderRadius: 22,
     borderWidth: 1.5,
@@ -876,5 +912,95 @@ const styles = StyleSheet.create({
     color: '#94a3b8',
     fontWeight: 'bold',
     fontSize: 13,
+  },
+  stanceModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 28,
+  },
+  stanceModalCard: {
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    paddingHorizontal: 22,
+    paddingTop: 22,
+    paddingBottom: 18,
+    alignItems: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#0f172a',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.18,
+        shadowRadius: 24,
+      },
+      android: { elevation: 8 },
+      default: {},
+    }),
+  },
+  stanceModalIconWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: NAV_GREEN_SOFT,
+    borderWidth: 1,
+    borderColor: NAV_GREEN_BORDER,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  stanceModalTitle: {
+    color: '#0f172a',
+    fontSize: 18,
+    fontWeight: '800',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  stanceModalBody: {
+    color: '#64748b',
+    fontSize: 14,
+    lineHeight: 21,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  stanceChoiceBtn: {
+    width: '100%',
+    backgroundColor: NAV_GREEN_SOFT,
+    borderRadius: 14,
+    paddingVertical: 13,
+    alignItems: 'center',
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: NAV_GREEN_BORDER,
+  },
+  stanceChoiceBtnText: {
+    color: NAV_GREEN,
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  stanceCancelBtn: {
+    width: '100%',
+    backgroundColor: ACCENT_SOFT,
+    borderRadius: 14,
+    paddingVertical: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: ACCENT_BORDER,
+    marginTop: 2,
+  },
+  stanceCancelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  stanceCancelText: {
+    color: ACCENT,
+    fontSize: 14,
+    fontWeight: '700',
   },
 });

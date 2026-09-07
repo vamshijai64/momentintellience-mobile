@@ -13,19 +13,18 @@ export const GlassHomeIcon: React.FC<GlassIconProps> = ({
   active = false,
 }) => {
   return (
-    <View style={[styles.iconContainer, active && styles.activeGlowCyan]}>
+    <View style={[styles.iconContainer, active && styles.activeGlowEmerald]}>
       <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
         <Defs>
           <LinearGradient id="homeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <Stop offset="0%" stopColor={active ? '#38bdf8' : '#94a3b8'} stopOpacity={active ? 1 : 0.7} />
-            <Stop offset="100%" stopColor={active ? '#0284c7' : '#475569'} stopOpacity={active ? 0.9 : 0.5} />
+            <Stop offset="0%" stopColor={active ? '#34d399' : '#94a3b8'} stopOpacity={active ? 1 : 0.7} />
+            <Stop offset="100%" stopColor={active ? '#059669' : '#475569'} stopOpacity={active ? 0.9 : 0.5} />
           </LinearGradient>
           <LinearGradient id="homeGlass" x1="0%" y1="0%" x2="0%" y2="100%">
-            <Stop offset="0%" stopColor="#38bdf8" stopOpacity={active ? 0.35 : 0.1} />
-            <Stop offset="100%" stopColor="#0369a1" stopOpacity={active ? 0.15 : 0.02} />
+            <Stop offset="0%" stopColor="#34d399" stopOpacity={active ? 0.35 : 0.1} />
+            <Stop offset="100%" stopColor="#059669" stopOpacity={active ? 0.15 : 0.02} />
           </LinearGradient>
         </Defs>
-        {/* Glass Base */}
         <Path
           d="M3 10.182V20C3 20.5523 3.44772 21 4 21H9V14C9 13.4477 9.44772 13 10 13H14C14.5523 13 15 13.4477 15 14V21H20C20.5523 21 21 20.5523 21 20V10.182C21 9.69768 20.8248 9.22998 20.5056 8.86249L13.5056 0.812492C12.714 -0.0984973 11.286 -0.0984973 10.4944 0.812492L3.4944 8.86249C3.17522 9.22998 3 9.69768 3 10.182Z"
           fill="url(#homeGlass)"
@@ -33,7 +32,7 @@ export const GlassHomeIcon: React.FC<GlassIconProps> = ({
           strokeWidth={active ? 1.8 : 1.4}
         />
         {active && (
-          <Circle cx="12" cy="17" r="1.5" fill="#38bdf8" />
+          <Circle cx="12" cy="17" r="1.5" fill="#34d399" />
         )}
       </Svg>
     </View>
@@ -57,8 +56,8 @@ export const GlassHistoryIcon: React.FC<GlassIconProps> = ({
             <Stop offset="100%" stopColor="#059669" stopOpacity={active ? 0.2 : 0.05} />
           </LinearGradient>
           <LinearGradient id="barGrad2" x1="0%" y1="0%" x2="0%" y2="100%">
-            <Stop offset="0%" stopColor="#38bdf8" stopOpacity={active ? 0.8 : 0.3} />
-            <Stop offset="100%" stopColor="#0284c7" stopOpacity={active ? 0.3 : 0.1} />
+            <Stop offset="0%" stopColor="#34d399" stopOpacity={active ? 0.8 : 0.3} />
+            <Stop offset="100%" stopColor="#059669" stopOpacity={active ? 0.3 : 0.1} />
           </LinearGradient>
         </Defs>
         {/* Outer Frame / Trend Line */}
@@ -87,7 +86,7 @@ export const GlassHistoryIcon: React.FC<GlassIconProps> = ({
           height="11"
           rx="1.6"
           fill="url(#barGrad2)"
-          stroke={active ? '#38bdf8' : '#94a3b8'}
+          stroke={active ? '#34d399' : '#94a3b8'}
           strokeWidth={1.4}
         />
         {/* Bar 3 */}
@@ -111,19 +110,18 @@ export const GlassProfileIcon: React.FC<GlassIconProps> = ({
   active = false,
 }) => {
   return (
-    <View style={[styles.iconContainer, active && styles.activeGlowGold]}>
+    <View style={[styles.iconContainer, active && styles.activeGlowEmerald]}>
       <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
         <Defs>
           <LinearGradient id="profGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <Stop offset="0%" stopColor={active ? '#fbbf24' : '#94a3b8'} stopOpacity={active ? 1 : 0.7} />
-            <Stop offset="100%" stopColor={active ? '#d97706' : '#475569'} stopOpacity={active ? 0.9 : 0.5} />
+            <Stop offset="0%" stopColor={active ? '#34d399' : '#94a3b8'} stopOpacity={active ? 1 : 0.7} />
+            <Stop offset="100%" stopColor={active ? '#059669' : '#475569'} stopOpacity={active ? 0.9 : 0.5} />
           </LinearGradient>
           <LinearGradient id="profGlass" x1="0%" y1="0%" x2="0%" y2="100%">
-            <Stop offset="0%" stopColor="#fbbf24" stopOpacity={active ? 0.35 : 0.1} />
-            <Stop offset="100%" stopColor="#b45309" stopOpacity={active ? 0.15 : 0.02} />
+            <Stop offset="0%" stopColor="#34d399" stopOpacity={active ? 0.35 : 0.1} />
+            <Stop offset="100%" stopColor="#059669" stopOpacity={active ? 0.15 : 0.02} />
           </LinearGradient>
         </Defs>
-        {/* Head */}
         <Circle
           cx="12"
           cy="7.5"
@@ -132,7 +130,6 @@ export const GlassProfileIcon: React.FC<GlassIconProps> = ({
           stroke="url(#profGrad)"
           strokeWidth={active ? 1.8 : 1.4}
         />
-        {/* Body Arc */}
         <Path
           d="M4.5 19.5C4.5 15.634 7.85786 12.5 12 12.5C16.1421 12.5 19.5 15.634 19.5 19.5"
           fill="url(#profGlass)"
@@ -141,7 +138,7 @@ export const GlassProfileIcon: React.FC<GlassIconProps> = ({
           strokeLinecap="round"
         />
         {active && (
-          <Circle cx="12" cy="3" r="1" fill="#fbbf24" />
+          <Circle cx="12" cy="3" r="1" fill="#34d399" />
         )}
       </Svg>
     </View>

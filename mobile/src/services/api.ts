@@ -394,7 +394,55 @@ export interface ShotHistoryItem {
   shot_direction_label?: string;
   shot_count: number;
   overlay_video_path?: string;
+  overlay_video_url?: string;
+  thumbnail_url?: string;
 }
+
+const pickHistoryOverlay = (raw: any): string | undefined => {
+  const candidates = [
+    raw?.overlay_video_url,
+    raw?.overlay_video_path,
+    raw?.overlay_path,
+    raw?.processed_video_url,
+    raw?.processed_video_path,
+    raw?.video_url,
+    raw?.url,
+  ];
+  for (const value of candidates) {
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+  return undefined;
+};
+
+const normalizeShotHistoryItem = (raw: any): ShotHistoryItem | null => {
+  const videoId = raw?.video_id || raw?.id || raw?.report_id;
+  if (!videoId) return null;
+
+  const overlay = pickHistoryOverlay(raw);
+  const thumbnail =
+    (typeof raw?.thumbnail_url === 'string' && raw.thumbnail_url) ||
+    (typeof raw?.thumb_url === 'string' && raw.thumb_url) ||
+    (typeof raw?.poster_url === 'string' && raw.poster_url) ||
+    undefined;
+
+  return {
+    video_id: String(videoId),
+    created_at: String(raw?.created_at || raw?.createdAt || new Date().toISOString()),
+    shot_type: raw?.shot_type || raw?.shotType,
+    verdict: raw?.verdict,
+    composite_score:
+      typeof raw?.composite_score === 'number'
+        ? raw.composite_score
+        : typeof raw?.overall_score === 'number'
+          ? raw.overall_score
+          : undefined,
+    shot_direction_label: raw?.shot_direction_label,
+    shot_count: typeof raw?.shot_count === 'number' ? raw.shot_count : 1,
+    overlay_video_path: overlay,
+    overlay_video_url: overlay,
+    thumbnail_url: thumbnail,
+  };
+};
 
 export const getShotHistory = async (): Promise<ShotHistoryItem[]> => {
   const savedEmail = await AsyncStorage.getItem(AUTH_EMAIL_KEY);
@@ -405,7 +453,37 @@ export const getShotHistory = async (): Promise<ShotHistoryItem[]> => {
     await ensureGuestSession();
   }
   const response = await apiClient.get('/videos/history');
-  return response.data;
+  const payload = response.data;
+  const list = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.items)
+      ? payload.items
+      : Array.isArray(payload?.videos)
+        ? payload.videos
+        : Array.isArray(payload?.results)
+          ? payload.results
+          : [];
+
+  return list
+    .map(normalizeShotHistoryItem)
+    .filter((item: ShotHistoryItem | null): item is ShotHistoryItem => item != null);
+};
+
+export const deleteShotVideo = async (videoId: string): Promise<void> => {
+  if (!videoId) throw new Error('Missing video id');
+  if (!getAuthToken()) {
+    await ensureGuestSession();
+  }
+  try {
+    await apiClient.delete(`/videos/${videoId}`);
+  } catch (err: any) {
+    // Some backends use /videos/history/:id
+    if (err?.response?.status === 404) {
+      await apiClient.delete(`/videos/history/${videoId}`);
+      return;
+    }
+    throw err;
+  }
 };
 
 export const askAiCoach = async (videoId: string, message: string): Promise<string> => {

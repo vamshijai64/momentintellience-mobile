@@ -14,6 +14,7 @@ import {
   Image,
 } from 'react-native';
 import { ensureGuestSession, loginUser, registerUser } from '../services/api';
+import { ArrowRight } from 'lucide-react-native';
 
 interface AuthScreenProps {
   onAuthSuccess: (email?: string) => void;
@@ -223,7 +224,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onSkipGue
                   {isLogin ? 'Sign in' : 'Create account'}
                 </Text>
                 <View style={styles.arrowCircle}>
-                  <Text style={styles.arrow}>→</Text>
+                  <ArrowRight size={18} color="#ffffff" strokeWidth={2.6} />
                 </View>
               </>
             )}
@@ -384,11 +385,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.22)',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  arrow: {
-    color: '#ffffff',
-    fontSize: 18,
-    fontWeight: '800',
   },
   guestBtn: {
     marginTop: 22,
