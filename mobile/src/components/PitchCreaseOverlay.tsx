@@ -25,8 +25,8 @@ export const PitchCreaseOverlay: React.FC<PitchCreaseOverlayProps> = ({
   isCalibrated = false,
   statusText,
 }) => {
-  const statusColor = isCalibrated ? '#10b981' : '#ef4444';
-  const pillText = statusText || (isCalibrated ? 'STUMP ALIGNED & CALIBRATED' : 'NO BATSMAN DETECTED');
+  const statusColor = '#38bdf8';
+  const pillText = statusText || 'ALIGN BATSMAN IN CREASE';
 
   const trackRef = useRef<View>(null);
   const trackHeightRef = useRef(100);

@@ -8,11 +8,12 @@ import { AuthScreen } from './src/screens/AuthScreen';
 import { ShotHistoryScreen } from './src/screens/ShotHistoryScreen';
 import { ProfileScreen } from './src/screens/ProfileScreen';
 import { SignOutScreen } from './src/screens/SignOutScreen';
+import { ARLabScreen } from './src/screens/ARLabScreen';
 import { AppBottomNav, TabName } from './src/components/AppBottomNav';
 import { markOnboardingDone, restoreAuthSession } from './src/services/api';
 import { colors } from './src/theme';
 
-type AppScreen = 'LOADING' | 'GUIDE' | 'AUTH' | 'RECORD' | 'ANALYSIS' | 'HISTORY' | 'PROFILE' | 'SIGN_OUT';
+type AppScreen = 'LOADING' | 'GUIDE' | 'AUTH' | 'RECORD' | 'AR_LAB' | 'ANALYSIS' | 'HISTORY' | 'PROFILE' | 'SIGN_OUT';
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<AppScreen>('LOADING');
@@ -111,7 +112,7 @@ export default function App() {
 
   const showBottomNav =
     !cameraBusy &&
-    (currentScreen === 'RECORD' || currentScreen === 'HISTORY' || currentScreen === 'PROFILE');
+    (currentScreen === 'RECORD' || currentScreen === 'AR_LAB' || currentScreen === 'HISTORY' || currentScreen === 'PROFILE');
 
   if (currentScreen === 'LOADING') {
     return <SplashScreen statusText="Restoring your session..." />;
@@ -147,6 +148,8 @@ export default function App() {
             onSignOut={() => setCurrentScreen('SIGN_OUT')}
             onBusyChange={setCameraBusy}
           />
+        ) : currentScreen === 'AR_LAB' ? (
+          <ARLabScreen />
         ) : currentScreen === 'HISTORY' ? (
           <ShotHistoryScreen
             accountKey={historyAccountKey}

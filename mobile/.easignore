@@ -18,3 +18,4 @@ android/local.properties
 
 # Local env files
 .env*.local
+step*.png

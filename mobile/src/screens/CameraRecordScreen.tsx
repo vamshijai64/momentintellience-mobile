@@ -5,6 +5,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { UserRound, ArrowLeft, Upload } from 'lucide-react-native';
 import { CameraStumpOverlay } from '../components/CameraStumpOverlay';
 import { PitchCreaseOverlay } from '../components/PitchCreaseOverlay';
+import { RealtimeARCoachOverlay } from '../components/RealtimeARCoachOverlay';
 import { uploadVideoForAnalysis, detectBatsmanInFrame, pollForAnalysisResult, PollStatusUpdate } from '../services/api';
 import { GlassSparkleAIIcon } from '../components/GlassIcons';
 
@@ -58,6 +59,7 @@ export const CameraRecordScreen: React.FC<CameraRecordScreenProps> = ({
   const [pendingStanceUri, setPendingStanceUri] = useState<string | null>(null);
   const [stanceModalMode, setStanceModalMode] = useState<'record' | 'gallery'>('record');
   const [cameraMode, setCameraMode] = useState<'video' | 'picture'>('video');
+  const [arCoachEnabled, setArCoachEnabled] = useState(false);
 
   const cameraRef = useRef<any>(null);
   const isDetectingFrameRef = useRef(false);
@@ -96,11 +98,11 @@ export const CameraRecordScreen: React.FC<CameraRecordScreenProps> = ({
     return () => clearInterval(interval);
   }, []);
 
-  // Keep batsman alignment ready and aligned
+  // Keep pitch crease framing guide active
   useEffect(() => {
     setIsBatsmanDetected(true);
     setIsStumpAligned(true);
-    setDetectionMessage('BATSMAN READY IN FRAME');
+    setDetectionMessage('ALIGN BATSMAN IN CREASE');
   }, []);
 
   // Request Camera & Microphone Permissions if needed
@@ -360,6 +362,14 @@ export const CameraRecordScreen: React.FC<CameraRecordScreenProps> = ({
         />
       </CameraView>
 
+      {/* Realtime 3D Holographic AR Cricket Coach */}
+      <RealtimeARCoachOverlay
+        visible={arCoachEnabled}
+        onClose={() => setArCoachEnabled(false)}
+        defaultShot="COVER DRIVE"
+        battingStance={battingStance === 'LEFT' ? 'LEFT' : 'RIGHT'}
+      />
+
 
 
       {/* Primary Recording Safeguard */}
@@ -406,8 +416,30 @@ export const CameraRecordScreen: React.FC<CameraRecordScreenProps> = ({
         </View>
       ) : (
         <View style={styles.controlsBar}>
-          {/* Left spacer for perfect horizontal shutter centering */}
-          <View style={styles.controlsSideSpacer} />
+          {/* Left: AR Coach Hologram Toggle */}
+          <TouchableOpacity
+            style={styles.glassUploadButton}
+            onPress={() => setArCoachEnabled((prev) => !prev)}
+            activeOpacity={0.72}
+            accessibilityLabel="AR Coach"
+          >
+            <View
+              style={[
+                styles.glassUploadIconCircle,
+                arCoachEnabled && styles.arCoachCircleActive,
+              ]}
+            >
+              <Text style={styles.arCoachEmoji}>🥽</Text>
+            </View>
+            <Text
+              style={[
+                styles.glassUploadLabel,
+                arCoachEnabled && styles.arCoachLabelActive,
+              ]}
+            >
+              {arCoachEnabled ? 'AR Active' : 'AR Coach'}
+            </Text>
+          </TouchableOpacity>
 
           {/* iPhone Shutter Record Button */}
           <TouchableOpacity
@@ -747,6 +779,17 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0, 0, 0, 0.65)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 3,
+  },
+  arCoachCircleActive: {
+    backgroundColor: 'rgba(2, 132, 199, 0.45)',
+    borderColor: '#38bdf8',
+  },
+  arCoachEmoji: {
+    fontSize: 22,
+  },
+  arCoachLabelActive: {
+    color: '#38bdf8',
+    fontWeight: '900',
   },
   recordButton: {
     width: 78,

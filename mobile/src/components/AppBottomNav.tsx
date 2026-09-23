@@ -1,13 +1,13 @@
 import React from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Platform } from 'react-native';
-import { Camera, History, UserRound } from 'lucide-react-native';
+import { Camera, History, UserRound, Sparkles } from 'lucide-react-native';
 import { colors, radii, shadows } from '../theme';
 
-export type TabName = 'RECORD' | 'HISTORY' | 'PROFILE' | 'ANALYSIS';
+export type TabName = 'RECORD' | 'AR_LAB' | 'HISTORY' | 'PROFILE' | 'ANALYSIS';
 
 interface AppBottomNavProps {
   activeTab: string;
-  onTabPress: (tab: 'RECORD' | 'HISTORY' | 'PROFILE') => void;
+  onTabPress: (tab: 'RECORD' | 'AR_LAB' | 'HISTORY' | 'PROFILE') => void;
 }
 
 export const AppBottomNav: React.FC<AppBottomNavProps> = ({ activeTab, onTabPress }) => {
@@ -21,7 +21,7 @@ export const AppBottomNav: React.FC<AppBottomNavProps> = ({ activeTab, onTabPres
           activeOpacity={0.75}
         >
           <Camera
-            size={19}
+            size={18}
             color={activeTab === 'RECORD' ? colors.primaryForeground : colors.mutedForeground}
             strokeWidth={activeTab === 'RECORD' ? 2.4 : 2}
           />
@@ -35,14 +35,35 @@ export const AppBottomNav: React.FC<AppBottomNavProps> = ({ activeTab, onTabPres
           </Text>
         </TouchableOpacity>
 
-        {/* Tab 2: History */}
+        {/* Tab 2: 3D AR Studio */}
+        <TouchableOpacity
+          style={[styles.navItem, activeTab === 'AR_LAB' && styles.navItemActive]}
+          onPress={() => onTabPress('AR_LAB')}
+          activeOpacity={0.75}
+        >
+          <Sparkles
+            size={18}
+            color={activeTab === 'AR_LAB' ? colors.primaryForeground : '#0284c7'}
+            strokeWidth={activeTab === 'AR_LAB' ? 2.4 : 2}
+          />
+          <Text
+            style={[
+              styles.navLabel,
+              activeTab === 'AR_LAB' ? styles.navLabelActive : { color: '#0284c7' },
+            ]}
+          >
+            3D AR
+          </Text>
+        </TouchableOpacity>
+
+        {/* Tab 3: History */}
         <TouchableOpacity
           style={[styles.navItem, activeTab === 'HISTORY' && styles.navItemActive]}
           onPress={() => onTabPress('HISTORY')}
           activeOpacity={0.75}
         >
           <History
-            size={19}
+            size={18}
             color={activeTab === 'HISTORY' ? colors.primaryForeground : colors.mutedForeground}
             strokeWidth={activeTab === 'HISTORY' ? 2.4 : 2}
           />
@@ -56,14 +77,14 @@ export const AppBottomNav: React.FC<AppBottomNavProps> = ({ activeTab, onTabPres
           </Text>
         </TouchableOpacity>
 
-        {/* Tab 3: Profile */}
+        {/* Tab 4: Profile */}
         <TouchableOpacity
           style={[styles.navItem, activeTab === 'PROFILE' && styles.navItemActive]}
           onPress={() => onTabPress('PROFILE')}
           activeOpacity={0.75}
         >
           <UserRound
-            size={19}
+            size={18}
             color={activeTab === 'PROFILE' ? colors.primaryForeground : colors.mutedForeground}
             strokeWidth={activeTab === 'PROFILE' ? 2.4 : 2}
           />

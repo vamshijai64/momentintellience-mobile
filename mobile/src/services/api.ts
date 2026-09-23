@@ -5,8 +5,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AnalysisReport } from '../types';
 
 // Set custom URL here if using Ngrok / LocalTunnel / Cloud server (e.g. 'https://your-ngrok-url.ngrok-free.app/api/v1')
-  export const CUSTOM_API_URL: string | null = 'http://18.144.67.31:8000/api/v1';
-// export const CUSTOM_API_URL: string | null = 'http://192.168.31.60:8000/api/v1';
+  //  export const CUSTOM_API_URL: string | null = 'http://54.153.75.215:8000/api/v1';
+export const CUSTOM_API_URL: string | null = 'http://192.168.31.60:8000/api/v1';
 
 const AUTH_TOKEN_KEY = '@ai_cricket_coach/auth_token';
 const AUTH_EMAIL_KEY = '@ai_cricket_coach/auth_email';
